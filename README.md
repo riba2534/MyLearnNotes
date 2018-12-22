@@ -6,7 +6,7 @@
 > 具体内容，可以用以下几个分类中找到.
 
 
-- [CPP](CPP/README.MD)
+- [CPP](CPP/README.md)
 - [Linux](GUNLinux/README.md)
 - [操作系统](操作系统/README.md)
 - [计算机网络](计算机网络/README.md)
