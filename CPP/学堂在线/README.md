@@ -33,3 +33,38 @@
 
 ![](https://i.loli.net/2018/12/24/5c2071ea22e56.png)
 
+## 7.7/7.8 动态内存管理
+
+malloc的使用:
+
+```cpp
+int *p = (int *)malloc(n * sizeof(int));//分配一个n个整数的动态数组
+```
+
+- 使用`malloc`申请内存以后必须用`free`释放掉
+- 一个指针被释放掉以后，最好指向`NULL`，比如:`p = NULL`
+
+new的使用，动态创建单个目标数据对象：
+
+```cpp
+int *p;
+p = new int;
+*p = 10;
+```
+
+或者：
+
+```cpp
+int *p;
+p = new(int);
+*p = 10;
+```
+
+销毁的时候`delete p`即可.
+
+- `malloc`和`free`搭配
+- `new`和`delete`搭配
+- 一定不要混用
+- 在用`delete`销毁数组的时候，用`delete []p`，不能写反。
+- 
+
