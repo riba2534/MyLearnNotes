@@ -13,6 +13,6 @@
 - [C++中main函数的参数](C++中main函数的参数.md)
 - C++11新特性:
   1. [列表初始化](CPP11新特性/列表初始化.md)
-  2. [decltype关键字类型推导](CPP11新特性/decltype关键字类型推导.md)
+  2. [decltype类型推导及追踪返回值类型](CPP11新特性/decltype类型推导及追踪返回值类型.md)
 - 占位
 
