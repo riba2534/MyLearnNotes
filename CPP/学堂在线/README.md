@@ -1,6 +1,4 @@
-# 我的C++学习进度
-
-## 学堂在线
+## 学堂在线笔记
 
 [基于Linux的C++（自主模式）](http://www.xuetangx.com/courses/course-v1:TsinghuaX+20740084X+sp/about)
 
