@@ -4,7 +4,13 @@
 
 ### 剑指offer
 
+题目链接：[剑指Offer](https://www.nowcoder.com/ta/coding-interviews)
 
+为了便于本地测试，我的ac代码，在 main 函数里面传了参，提交只需提交对应的解决函数即可。
+
+- [二维数组中的查找](剑指Offer/二维数组中的查找.md)
+- [替换空格](剑指Offer/替换空格.md)
+- [从尾到头打印链表](剑指Offer/从尾到头打印链表.md)
 
 
 
