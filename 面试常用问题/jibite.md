@@ -111,6 +111,21 @@
 
 17. socket 函数
 
+    答：函数原型是
+
+    ```cpp
+    #include <sys/socket.h>
+    int socket(int domain, int type, int protocol);
+    /*
+    成功时返回文件描述符，失败时返回-1
+    domain: 套接字中使用的协议族（Protocol Family）
+    type: 套接字数据传输的类型信息
+    protocol: 计算机间通信中使用的协议信息
+    */
+    ```
+
+    
+
 18. 多线程知道多少
 
 19. 进程间通讯
