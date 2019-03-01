@@ -76,3 +76,8 @@
 - [2017-网易-合唱团](刷题/牛客真题/2017-网易-合唱团.md)
 - [2018-拼多多-迷宫寻路.md](刷题/2018-拼多多-迷宫寻路.md)
 
+## LeetCode
+
+- [K-th Smallest in Lexicographical Order](LeetCode/K-th Smallest in Lexicographical Order.md)
+- [Minimum Depth of Binary Tree](LeetCode/Minimum Depth of Binary Tree.md)
+- 
