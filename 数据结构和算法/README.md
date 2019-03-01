@@ -80,4 +80,9 @@
 
 - [K-th Smallest in Lexicographical Order](LeetCode/K-th Smallest in Lexicographical Order.md)
 - [Minimum Depth of Binary Tree](LeetCode/Minimum Depth of Binary Tree.md)
+- [两数相加](LeetCode/两数相加.md)
+- [搜索旋转排序数组](LeetCode/搜索旋转排序数组.md)
+- [第一个错误的版本](LeetCode/第一个错误的版本.md)
+- [寻找峰值](LeetCode/寻找峰值.md)
+- [在排序数组中查找元素的第一个和最后一个位置](LeetCode/在排序数组中查找元素的第一个和最后一个位置.md)
 - 
