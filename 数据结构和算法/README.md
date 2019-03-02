@@ -70,21 +70,35 @@
 - 
 
 
+## LeetCode
+
+以下是我的 LeetCode 刷题题解，挑一些典型题。
+
+| LeetCode 题号 |                             题解                             | 难度 |
+| :-----------: | :----------------------------------------------------------: | :--: |
+|       4       | [寻找两个有序数组的中位数](LeetCode/寻找两个有序数组的中位数.md) | 困难 |
+|      440      |    [字典序的第K小数字.md](LeetCode/字典序的第K小数字.md)     | 困难 |
+|      111      |       [二叉树的最小深度](LeetCode/二叉树的最小深度.md)       | 简单 |
+|      50       |                 [Pow(x,n)](LeetCode/pow.md)                  | 中等 |
+|      287      |             [寻找重复数](LeetCode/寻找重复数.md)             | 中等 |
+|      658      |  [找到 K 个最接近的元素](LeetCode/找到 K 个最接近的元素.md)  | 中等 |
+|      34       | [在排序数组中查找元素的第一个和最后一个位置](LeetCode/在排序数组中查找元素的第一个和最后一个位置.md) | 中等 |
+|      162      |               [寻找峰值](LeetCode/寻找峰值.md)               | 中等 |
+|      278      |       [第一个错误的版本](LeetCode/第一个错误的版本.md)       | 简单 |
+|      33       |       [搜索旋转排序数组](LeetCode/搜索旋转排序数组.md)       | 中等 |
+|       2       |               [两数相加](LeetCode/两数相加.md)               | 简单 |
+|               |                                                              |      |
+|               |                                                              |      |
+|               |                                                              |      |
+|               |                                                              |      |
+|               |                                                              |      |
+|               |                                                              |      |
+|               |                                                              |      |
+|               |                                                              |      |
+
 
 ### 笔试真题:
 
-- [2017-网易-合唱团](刷题/牛客真题/2017-网易-合唱团.md)
-- [2018-拼多多-迷宫寻路.md](刷题/2018-拼多多-迷宫寻路.md)
-
-## LeetCode
-
-- [K-th Smallest in Lexicographical Order](LeetCode/K-th Smallest in Lexicographical Order.md)
-- [Minimum Depth of Binary Tree](LeetCode/Minimum Depth of Binary Tree.md)
-- [两数相加](LeetCode/两数相加.md)
-- [搜索旋转排序数组](LeetCode/搜索旋转排序数组.md)
-- [第一个错误的版本](LeetCode/第一个错误的版本.md)
-- [寻找峰值](LeetCode/寻找峰值.md)
-- [在排序数组中查找元素的第一个和最后一个位置](LeetCode/在排序数组中查找元素的第一个和最后一个位置.md)
-- [找到 K 个最接近的元素](LeetCode/找到 K 个最接近的元素.md)
-- [pow](pow.md)
+- [2017-网易-合唱团](牛客真题/2017-网易-合唱团.md)
+- [2018-拼多多-迷宫寻路.md](牛客真题/2018-拼多多-迷宫寻路.md)
 
