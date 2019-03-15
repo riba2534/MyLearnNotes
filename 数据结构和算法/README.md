@@ -100,9 +100,9 @@
 |      295      |         [数据流的中位数](LeetCode/数据流的中位数.md)         | 困难 |
 |      144      |       [二叉树展开为链表](LeetCode/二叉树展开为链表.md)       | 中等 |
 |      718      |         [最长重复子数组](LeetCode/最长重复子数组.md)         | 中等 |
-|      28       | [实现strStr()](https://leetcode-cn.com/problems/implement-strstr/) | 简单 |
-|      46       |   [全排列](https://leetcode-cn.com/problems/permutations/)   | 中等 |
-|      31       | [下一个排列](https://leetcode-cn.com/problems/next-permutation/) | 中等 |
+|      28       |           [实现strStr()](LeetCode/实现strStr().md)           | 简单 |
+|      46       |                 [全排列](LeetCode/全排列.md)                 | 中等 |
+|      31       |             [下一个排列](LeetCode/下一个排列.md)             | 中等 |
 |               |                                                              |      |
 |               |                                                              |      |
 |               |                                                              |      |
