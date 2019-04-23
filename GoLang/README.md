@@ -718,3 +718,916 @@ fmt.Printf("An integer: %d, it's location in memory: %p\n", i1, &i1)
 var intP *int
 ```
 
+一个指针可以指向任何一个值得内存地址，在 32 位机器占 4 个字节，在 64 位机器占 8 个字节，并且与他所指向的值得大小无关。可以在前面加上 `*` 来获取其指向的内容。
+
+注意事项：
+
+1. 在书写表达式 `var p *type` 时一定要爱在 `*` 号和指针类型之间留一个空格，要不然由于表达式变得复杂，更容易被误认为是一个乘法表达式。
+2. 符号 `*` 可以用来获取值，在任何情况下，这个表达式都是正确的 `var == *(&var)`
+
+下面是一个例子：
+
+```go
+package main
+import "fmt"
+func main() {
+	var i1 = 5
+	fmt.Printf("%d %p\n", i1, &i1)
+	var intP *int
+	intP = &i1
+	fmt.Printf("%p %d\n", intP, *intP)
+}
+// 运行结果：
+// 5 0xc000090000
+// 0xc000090000 5
+
+```
+
+从上面可以看出指针的用法。
+
+```go
+package main
+import "fmt"
+func main() {
+	s := "good bye"
+	var p *string = &s
+	*p = "ciao"
+	fmt.Printf("指针地址为：%p\n", p)
+	fmt.Printf("指针所指向的内容为：%s\n", *p)
+	fmt.Printf("s 串的内容为：%s\n", s)
+}
+// 运行结果：
+// 指针地址为：0xc0000101e0
+// 指针所指向的内容为：ciao
+// s 串的内容为：ciao
+```
+
+以上代码证明了可以根据指针来改变目标的内容。
+
+注意事项：
+
+1. 在 GoLang 中，不允许像 `C` 语言中一样的指针运算，比如 `pointer+2` ,Go 语言的指针保证了内存安全，因此 `c = *p++` 在 Go 语言中的代码中是不合法的
+
+2. 指针的一个高级应用是传递变量的引用(如函数的参数)，这样不会传递变量的拷贝，比较省内存
+
+3. 指针也可以指向指针，跟 `C` 语言中的多级指针一样，但是往往这样会使代码结构不清晰。
+
+4. 一个空指针的反向引用是不合法的，会报错，比如:
+
+   ```go
+   package main
+   func main() {
+   	var p *int = nil
+   	*p = 0
+   }
+   ```
+
+   这样就是不合法的，不能对一个空指针进行反向引用。
+
+## 3 控制结构
+
+GoLang 提供了以下的分支与结构语句：
+
+- If-else 语句
+- switch 语句
+- select 结构，用于 channel 的选择
+
+可以使用迭代循环结构来重复执行一次或者多次的代码：
+
+- for (range) 结构
+
+用 `break` 与 `continue` 这样的关键字可以用于中途改变循环的状态，可以用 `return`来结束某个函数的执行，或者使用 `goto` 和标签调整程序的执行位置。
+
+GoLang  中完全省略了 `if` `switch` `for` 语句中的两侧括号，减少了很多视觉混乱因素，使得代码更加简洁。 
+
+### 3.1 `if-else` 结构
+
+写法类似于 `C/CPP` ，一般有以下几种写法：
+
+```go
+//方法一：
+if 条件{
+	//语句
+}
+//方法二：
+if 条件1{
+	//语句
+}else{
+	//语句
+}
+//方法三：
+if 条件1{
+	//
+}else if 条件2{
+	//
+}else{
+	//
+}
+```
+
+从用法上来说，就比 `C` 语言少了括号，其余完全一样
+
+注意：左大括号一定要跟在条件右边
+
+例子：
+
+```go
+// 判断系统是否是 windows
+if runtime.GOOS == "windows"	 {
+ 	.	..
+ } else { // Unix-like
+ 	.	..
+ }
+```
+
+if 中还可以包含一个初始化语句，不过要必须用 `;` 来进行分割，可以这样写：
+
+```go
+if val := 10; val > 1 {
+	//语句
+}
+```
+
+### 3.2 测试多返回值函数的错误
+
+Go 语言的函数经常使用两个返回值来表示一个函数是否执行成功，返回某个值以及 `true` 来表示执行成功，返回零值或者 `false` 表示返回失败。当不使用 `true` 或 `false` 的时候，也可以使用一个`error` 类型的变量来代替作为第二个返回值，成功执行的话 `error` 的值为 `nil`  ,从下面的例子可以看出：
+
+```go
+package main
+
+import (
+	"fmt"
+	"strconv"
+)
+
+func main() {
+	var orig string = "ABC"
+	// var an int
+	var newS string
+	// var err error
+
+	fmt.Printf("The size of ints is: %d\n", strconv.IntSize)
+	// anInt, err = strconv.Atoi(origStr)
+	an, err := strconv.Atoi(orig)
+	if err != nil {
+		fmt.Printf("orig %s is not an integer - exiting with error\n", orig)
+		return
+	}
+	fmt.Printf("The integer is %d\n", an)
+	an = an + 5
+	newS = strconv.Itoa(an)
+	fmt.Printf("The new string is: %s\n", newS)
+}
+```
+
+需要注意的是，每一次最好先获取错误信息，当确保没有错误时，再执行相应的动作。
+
+### 3.3 `switch` 结构
+
+相比较 C 和 Java 等其它语言而言，Go 语言中的 switch 结构使用上更加灵活。它接受任意形式的表达式：
+
+```go
+switch var1 {
+	case val1:
+		...
+	case val2:
+		...
+	default:
+		...
+}
+```
+
+变量 var1 可以是任何类型，而 val1 和 val2 则可以是同类型的任意值。类型不被局限于常量或整数，但必须是相同的类型；或者最终结果为相同类型的表达式。前花括号 `{` 必须和 switch 关键字在同一行。
+
+您可以同时测试多个可能符合条件的值，使用逗号分割它们，例如：`case val1, val2, val3`。
+
+每一个 `case` 分支都是唯一的，从上至下逐一测试，直到匹配为止。（ Go 语言使用快速的查找算法来测试 switch 条件与 case 分支的匹配情况，直到算法匹配到某个 case 或者进入 default 条件为止。）
+
+一旦成功地匹配到某个分支，在执行完相应代码后就会退出整个 switch 代码块，也就是说您**不需要特别使用 `break` 语句来表示结束**。**程序也不会自动地去执行下一个分支的代码。如果在执行完每个分支的代码后，还希望继续执行后续分支的代码，可以使用 `fallthrough` 关键字来达到目的**
+
+因此，程序也不会自动地去执行下一个分支的代码。如果在执行完每个分支的代码后，还希望继续执行后续分支的代码，可以使用 `fallthrough` 关键字来达到目的。
+
+因此：
+
+```go
+switch i {
+	case 0: // 空分支，只有当 i == 0 时才会进入分支
+	case 1:
+		f() // 当 i == 0 时函数不会被调用
+}
+```
+
+并且：
+
+```go
+switch i {
+	case 0: fallthrough
+	case 1:
+		f() // 当 i == 0 时函数也会被调用
+}
+```
+
+switch 语句的第三种形式是包含一个初始化语句：
+
+```go
+switch initialization {
+	case val1:
+		...
+	case val2:
+		...
+	default:
+		...
+}
+```
+
+这种形式可以非常优雅地进行条件判断：
+
+```go
+switch result := calculate(); {
+	case result < 0:
+		...
+	case result > 0:
+		...
+	default:
+		// 0
+}
+```
+
+例子：
+
+```go
+package main
+import "fmt"
+func main() {
+	var num1 int = 100
+	switch num1 {
+	case 98, 99:
+		fmt.Println("It's equal to 98")
+	case 100:
+		fmt.Println("It's equal to 100")
+	default:
+		fmt.Println("It's not equal to 98 or 100")
+	}
+}
+```
+
+任何支持进行相等判断的类型都可以作为测试表达式的条件，包括 int、string、指针等。
+
+### 3.4 `for` 结构
+
+#### 3.4.1 普通用法
+
+直接用几个例子来演示 `for` 的用法，基本形式为：
+
+```go
+for 初始化语句; 条件语句; 修饰语句 {}
+```
+
+您还可以在循环中同时使用多个计数器：
+
+```go
+for i, j := 0, N; i < j; i, j = i+1, j-1 {}
+```
+
+如过对于一个字符串循环打印 `ASCII` 是可以的，但是对于一些占用 2 到 4 个字节的语言，比如中文日文这种，打印的就会有问题。
+
+```go
+package main
+import "fmt"
+func main() {
+	str := "Go is a beautiful language!"
+	fmt.Printf("The length of str is: %d\n", len(str))
+	for ix := 0; ix < len(str); ix++ {
+		fmt.Printf("Character on position %d is: %c \n", ix, str[ix])
+	}
+	str2 := "日本語"
+	fmt.Printf("The length of str2 is: %d\n", len(str2))
+	for ix := 0; ix < len(str2); ix++ {
+		fmt.Printf("Character on position %d is: %c \n", ix, str2[ix])
+	}
+}
+// 运行结果:
+// The length of str is: 27
+// Character on position 0 is: G
+// Character on position 1 is: o
+// Character on position 2 is:
+// Character on position 3 is: i
+// Character on position 4 is: s
+// Character on position 5 is:
+// Character on position 6 is: a
+// Character on position 7 is:
+// Character on position 8 is: b
+// Character on position 9 is: e
+// Character on position 10 is: a
+// Character on position 11 is: u
+// Character on position 12 is: t
+// Character on position 13 is: i
+// Character on position 14 is: f
+// Character on position 15 is: u
+// Character on position 16 is: l
+// Character on position 17 is:
+// Character on position 18 is: l
+// Character on position 19 is: a
+// Character on position 20 is: n
+// Character on position 21 is: g
+// Character on position 22 is: u
+// Character on position 23 is: a
+// Character on position 24 is: g
+// Character on position 25 is: e
+// Character on position 26 is: !
+// The length of str2 is: 9
+// Character on position 0 is: æ
+// Character on position 1 is:
+// Character on position 2 is: ¥
+// Character on position 3 is: æ
+// Character on position 4 is:
+// Character on position 5 is: ¬
+// Character on position 6 is: è
+// Character on position 7 is: ª
+// Character on position 8 is: %
+```
+
+#### 3.4.2 基于条件的迭代
+
+for 结构的第二种形式是没有头部的条件判断迭代（类似其它语言中的 while 循环），基本形式为：`for 条件语句 {}`。
+
+您也可以认为这是没有初始化语句和修饰语句的 for 结构，因此 `;;` 便是多余的了。
+
+比如这样：
+
+```go
+package main
+import "fmt"
+func main() {
+	var i int = 5
+	for i >= 0 {
+		i = i - 1
+		fmt.Printf("The variable i is now: %d\n", i)
+	}
+}
+```
+
+#### 3.4.3 无限循环
+
+条件语句是可以被省略的，如 `i:=0; ; i++` 或 `for { }` 或 `for ;; { }`（`;;` 会在使用 gofmt 时被移除）：这些循环的本质就是无限循环。最后一个形式也可以被改写为 `for true { }`，但一般情况下都会直接写 `for { }`。
+
+#### 3.4.4 `for-range` 结构
+
+这是 Go 特有的一种的迭代结构，您会发现它在许多情况下都非常有用。它可以迭代任何一个集合。语法上很类似其它语言中 foreach 语句，依旧可以获得每次迭代所对应的索引。一般形式为：`for ix, val := range coll { }`。
+
+每个 rune 字符和索引在 for-range 循环中是一一对应的。它能够自动根据 UTF-8 规则识别 Unicode 编码的字符。
+
+举个例子：
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+	str := "Go is a beautiful language!"
+	fmt.Printf("长度为：%d\n", len(str))
+	for pos, char := range str {
+		fmt.Printf("下标是：%d,字符是: %c \n", pos, char)
+	}
+	fmt.Println()
+	str2 := "Chinese: 日本語"
+	fmt.Printf("The length of str2 is: %d\n", len(str2))
+	for pos, char := range str2 {
+		fmt.Printf("character %c starts at byte position %d\n", char, pos)
+	}
+	fmt.Println()
+	fmt.Println("index int(rune) rune    char bytes")
+	for index, s := range str2 {
+		fmt.Printf("%-2d      %d      %U '%c' % X\n", index, s, s, s, []byte(string(s)))
+	}
+}
+
+```
+
+#### 3.4.5 `break` 和 `continue` 
+
+这两个关键字的用法和 `C/CPP` 一样，就不说了。
+
+#### 3.4.6 标签与 `goto`
+
+for、switch 或 select 语句都可以配合标签（label）形式的标识符使用，即某一行第一个以冒号（`:`）结尾的单词（gofmt 会将后续代码自动移至下一行）。
+
+比如以下代码：
+
+```go
+package main
+import "fmt"
+func main() {
+LABEL1:
+	for i := 0; i <= 5; i++ {
+		for j := 0; j <= 5; j++ {
+			if j == 4 {
+				continue LABEL1
+			}
+			fmt.Printf("i  is : %d ,and j is :%d\n", i, j)
+		}
+	}
+}
+// 运行结果:
+// i  is : 0 ,and j is :0
+// i  is : 0 ,and j is :1
+// i  is : 0 ,and j is :2
+// i  is : 0 ,and j is :3
+// i  is : 1 ,and j is :0
+// i  is : 1 ,and j is :1
+// i  is : 1 ,and j is :2
+// i  is : 1 ,and j is :3
+// i  is : 2 ,and j is :0
+// i  is : 2 ,and j is :1
+// i  is : 2 ,and j is :2
+// i  is : 2 ,and j is :3
+// i  is : 3 ,and j is :0
+// i  is : 3 ,and j is :1
+// i  is : 3 ,and j is :2
+// i  is : 3 ,and j is :3
+// i  is : 4 ,and j is :0
+// i  is : 4 ,and j is :1
+// i  is : 4 ,and j is :2
+// i  is : 4 ,and j is :3
+// i  is : 5 ,and j is :0
+// i  is : 5 ,and j is :1
+// i  is : 5 ,and j is :2
+// i  is : 5 ,and j is :3
+```
+
+上面每当到 `j==4` 的时候，就会重新去前面执行循环，所以 j 永远也不会输出 4 和 5。
+
+## 4 函数
+
+### 4.1 介绍
+
+每一个程序都包含很多的函数：函数是基本的代码块。
+
+Go是编译型语言，所以函数编写的顺序是无关紧要的；鉴于可读性的需求，最好把 `main()` 函数写在文件的前面，其他函数按照一定逻辑顺序进行编写（例如函数被调用的顺序）。
+
+编写多个函数的主要目的是将一个需要很多行代码的复杂问题分解为一系列简单的任务（那就是函数）来解决。而且，同一个任务（函数）可以被调用多次，有助于代码重用。
+
+Go 里面有三种类型的函数：
+
+- 普通的带有名字的函数
+- 匿名函数或者lambda函数
+- 方法（Methods)
+
+除了main()、init()函数外，其它所有类型的函数都可以有参数与返回值。函数参数、返回值以及它们的类型被统称为函数签名。
+
+函数被调用的基本格式如下：
+
+```go
+pack1.Function(arg1, arg2, …, argn)
+```
+
+函数可以将其他函数调用作为它的参数，只要这个被调用函数的返回值个数、返回值类型和返回值的顺序与调用函数所需求的实参是一致的，例如：
+
+假设 f1 需要 3 个参数 `f1(a, b, c int)`，同时 f2 返回 3 个参数 `f2(a, b int) (int, int, int)`，就可以这样调用 f1：`f1(f2(a, b))`。
+
+**Go语言不支持函数重载**
+
+如果需要申明一个在外部定义的函数，你只需要给出函数名与函数签名，不需要给出函数体：
+
+```go
+func flushICache(begin, end uintptr) // implemented externally
+```
+
+**函数也可以以申明的方式被使用，作为一个函数类型**，就像：
+
+```go
+type binOp func(int, int) int
+```
+
+在这里，不需要函数体 `{}`。
+
+函数是一等值（first-class value）：它们可以赋值给变量，就像 `add := binOp` 一样。
+
+这个变量知道自己指向的函数的签名，所以给它赋一个具有不同签名的函数值是不可能的。
+
+> 函数值（functions value）之间可以相互比较：如果它们引用的是相同的函数或者都是 nil 的话，则认为它们是相同的函数。函数不能在其它函数里面声明（不能嵌套），不过我们可以通过使用匿名函数来破除这个限制。
+>
+> 目前 Go 没有泛型（generic）的概念，也就是说它不支持那种支持多种类型的函数。不过在大部分情况下可以通过接口（interface），特别是空接口与类型选择（type switch）与/或者通过使用反射（reflection，参考）来实现相似的功能。使用这些技术将导致代码更为复杂、性能更为低下，所以在非常注意性能的的场合，最好是为每一个类型单独创建一个函数，而且代码可读性更强。
+>
+
+### 4.2 函数参数与返回值
+
+在函数块里面，`return` 之后的语句都不会执行。如果一个函数需要返回值，那么这个函数里面的每一个代码分支（code-path）都要有 `return` 语句。
+
+函数定义时，它的形参一般是有名字的，不过我们也可以定义没有形参名的函数，只有相应的形参类型，就像这样：`func f(int, int, float64)`。
+
+没有参数的函数通常被称为 **niladic** 函数（niladic function），就像 `main.main()`。
+
+### 4.3 按值传递和引用传递
+
+Go 默认使用按值传递来传递参数，也就是传递参数的副本。函数接收参数副本之后，在使用变量的过程中可能对副本的值进行更改，但不会影响到原来的变量，比如 `Function(arg1)`。
+
+如果希望函数可以直接修改参数的值，而不是对参数的副本进行操作，你需要将参数的地址（变量名前面添加&符号，比如 &variable）传递给函数，这就是按引用传递，比如 `Function(&arg1)`，此时传递给函数的是一个指针。如果传递给函数的是一个指针，指针的值（一个地址）会被复制，但指针的值所指向的地址上的值不会被复制；我们可以通过这个指针的值来修改这个值所指向的地址上的值。
+
+### 4.4 命名的返回值
+
+multiple_return.go 里的函数带有一个 `int` 参数，返回两个 `int` 值；其中一个函数的返回值在函数调用时就已经被赋予了一个初始零值。
+
+`getX2AndX3` 与 `getX2AndX3_2` 两个函数演示了如何使用非命名返回值与命名返回值的特性。当需要返回多个非命名返回值时，需要使用 `()` 把它们括起来，比如 `(int, int)`。
+
+命名返回值作为结果形参（result parameters）被初始化为相应类型的零值，当需要返回的时候，我们只需要一条简单的不带参数的return语句。需要注意的是，即使只有一个命名返回值，也需要使用 `()` 括起来
+
+```go
+package main
+import "fmt"
+var num int = 10
+var numx2, numx3 int
+func main() {
+	numx2, numx3 = getX2AndX3(num)
+	PrintValues()
+	numx2, numx3 = getX2AndX3_2(num)
+	PrintValues()
+}
+func PrintValues() {
+	fmt.Printf("num = %d, 2x num = %d, 3x num = %d\n", num, numx2, numx3)
+}
+func getX2AndX3(input int) (int, int) {
+	return 2 * input, 3 * input
+}
+func getX2AndX3_2(input int) (x2 int, x3 int) {
+	x2 = 2 * input
+	x3 = 3 * input
+	return
+}
+```
+
+空白符用来匹配一些不需要的值，`_`
+
+### 4.5 改变外部变量
+
+给函数传递指针可以修改外部变量，还节省内存，比如。
+
+```go
+package main
+import (
+    "fmt"
+)
+// this function changes reply:
+func Multiply(a, b int, reply *int) {
+    *reply = a * b
+}
+func main() {
+    n := 0
+    reply := &n
+    Multiply(10, 5, reply)
+    fmt.Println("Multiply:", *reply) // Multiply: 50
+}
+```
+
+### 4.6 传递变长参数
+
+**注意：可变长参数应该是函数定义的最右边的参数，即最后一个参数**
+
+如果函数的最后一个参数是采用 `...type` 的形式，那么这个函数就可以处理一个变长的参数，这个长度可以为 0，这样的函数称为变参函数。
+
+```go
+func myFunc(a, b, arg ...int) {}
+```
+
+这个函数接受一个类似某个类型的 slice 的参数，该参数可以通过for 循环结构迭代。
+
+示例函数和调用：x
+
+```go
+func Greeting(prefix string, who ...string)
+Greeting("hello:", "Joe", "Anna", "Eileen")
+```
+
+在 Greeting 函数中，变量 `who` 的值为 `[]string{"Joe", "Anna", "Eileen"}`。
+
+如果参数被存储在一个 slice 类型的变量 `slice` 中，则可以通过 `slice...` 的形式来传递参数，调用变参函数。
+
+比如下面的例子：
+
+```go
+package main
+import "fmt"
+func main() {
+	x := min(1, 3, 2, 0)
+	fmt.Printf("The minimum is: %d\n", x)
+	slice := []int{7, 9, 3, 5, 1}
+	x = min(slice...)
+	fmt.Printf("The minimum in the slice is: %d\n", x)
+}
+func min(s ...int) int {
+	if len(s) == 0 {
+		return 0
+	}
+	min := s[0]
+	for _, v := range s {
+		if v < min {
+			min = v
+		}
+	}
+	return min
+}
+```
+
+上面的代码可以传递一个变长参数，然后求出一个参数列表中的最小值。下面这种调用方法也可以。
+
+```go
+package main
+import "fmt"
+func run(s ...int) {
+	for _, v := range s {
+		fmt.Printf("%d\n", v)
+	}
+}
+func main() {
+	run(1, 2, 3, 4, 5, 6, 7)
+	run([]int{9, 8, 7, 6, 5, 4, 3, 2, 1}...)
+}
+```
+
+### 4.7 `defer` 和追踪
+
+关键字 defer 允许我们推迟到函数返回之前（或任意位置执行 `return` 语句之后）一刻才执行某个语句或函数（为什么要在返回之后才执行这些语句？因为 `return` 语句同样可以包含一些操作，而不是单纯地返回某个值）。
+
+关键字 defer 的用法类似于面向对象编程语言 Java 和 C# 的 `finally` 语句块，它一般用于释放某些已分配的资源。
+
+```go
+package main
+import "fmt"
+func fun1() {
+	fmt.Printf("fun1 start\n")
+	defer fun2()
+	fmt.Printf("fun1 end\n")
+}
+func fun2() {
+	fmt.Printf("fun2\n")
+}
+func a() {
+	i := 0
+	defer fmt.Println(i)
+	i++
+	fmt.Printf("i=%d\n", i)
+	return
+}
+func f() {
+	for i := 0; i < 5; i++ {
+		defer fmt.Printf("%d ", i)
+	}
+}
+func main() {
+	fun1()
+	a()
+	f()
+}
+```
+
+当有多个 `defer` 时，最后的一个最先执行，类似于栈
+
+### 4.8 内置函数
+
+以下是一个简单的列表。
+
+| 名称               | 说明                                                         |
+| ------------------ | ------------------------------------------------------------ |
+| close              | 用于管道通信                                                 |
+| len、cap           | len 用于返回某个类型的长度或数量（字符串、数组、切片、map 和管道）；cap 是容量的意思，用于返回某个类型的最大容量（只能用于切片和 map） |
+| new、make          | new 和 make 均是用于分配内存：new 用于值类型和用户定义的类型，如自定义结构，make 用于内置引用类型（切片、map 和管道）。它们的用法就像是函数，但是将类型作为参数：new(type)、make(type)。new(T) 分配类型 T 的零值并返回其地址，也就是指向类型 T 的指针（详见第 10.1 节）。它也可以被用于基本类型：`v := new(int)`。make(T) 返回类型 T 的初始化之后的值，因此它比 new 进行更多的工作（详见第 7.2.3/4 节、第 8.1.1 节和第 14.2.1 节）**new() 是一个函数，不要忘记它的括号** |
+| copy、append       | 用于复制和连接切片                                           |
+| panic、recover     | 两者均用于错误处理机制                                       |
+| print、println     | 底层打印函数（详见第 4.2 节），在部署环境中建议使用 fmt 包   |
+| complex、real imag | 用于创建和操作复数（详见第 4.5.2.2 节）                      |
+
+### 4.9 递归函数
+
+用递归写一个斐波那契如下：
+
+```go
+package main
+
+import "fmt"
+
+func fib(n int) (res int) {
+	if n <= 1 {
+		res = 1
+	} else {
+		res = fib(n-1) + fib(n-2)
+	}
+	return
+}
+func main() {
+	res := 0
+	for i := 0; i < 10; i++ {
+		res = fib(i)
+		fmt.Println("第", i, "个斐波那契数是", res)
+	}
+}
+```
+
+还可以支持过个递归函数相互调用。
+
+### 4.10 将函数作为参数
+
+函数可以作为其他函数的参数进行传递，然后在其他函数内调用执行，一般称之为回调，下面是一个例子：
+
+```go
+package main
+
+import "fmt"
+
+func ADD(a, b int) {
+	fmt.Printf("和是 %d\n", a+b)
+}
+func callback(y int, f func(int, int)) {
+	f(y, 2)
+}
+func main() {
+	callback(1, ADD)
+}
+
+```
+
+### 4.11 闭包
+
+不希望给函数起名字的时候可以使用匿名函数，例如：`func(x, y int) int { return x + y }`。可以被赋值于某个变量，即保存函数的地址到变量中：`fplus := func(x, y int) int { return x + y }`，然后通过变量名对函数进行调用：`fplus(3,4)`。
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+	f()
+}
+func f() {
+	for i := 0; i < 4; i++ {
+		g := func(i int) { fmt.Printf("%d ", i) } //此例子中只是为了演示匿名函数可分配不同的内存地址，在现实开发中，不应该把该部分信息放置到循环中。
+		g(i)
+		fmt.Printf(" - g is of type %T and has value %v\n", g, g)
+	}
+}
+```
+
+**闭包的应用：将函数作为返回值**
+
+```go
+package main
+import "fmt"
+func main() {
+	// make an Add2 function, give it a name p2, and call it:
+	p2 := Add2()
+	fmt.Printf("Call Add2 for 3 gives: %v\n", p2(3))
+	// make a special Adder function, a gets value 2:
+	TwoAdder := Adder(2)
+	fmt.Printf("The result is: %v\n", TwoAdder(3))
+}
+func Add2() func(b int) int {
+	return func(b int) int {
+		return b + 2
+	}
+}
+func Adder(a int) func(b int) int {
+	return func(b int) int {
+		return a + b
+	}
+}
+```
+
+工厂函数：
+
+一个返回值为另一个函数的函数可以被称之为工厂函数，这在您需要创建一系列相似的函数的时候非常有用：书写一个工厂函数而不是针对每种情况都书写一个函数。下面的函数演示了如何动态返回追加后缀的函数：
+
+```go
+func MakeAddSuffix(suffix string) func(string) string {
+	return func(name string) string {
+		if !strings.HasSuffix(name, suffix) {
+			return name + suffix
+		}
+		return name
+	}
+}
+```
+
+现在，我们可以生成如下函数：
+
+```go
+addBmp := MakeAddSuffix(".bmp")
+addJpeg := MakeAddSuffix(".jpeg")
+```
+
+然后调用它们：
+
+```go
+addBmp("file") // returns: file.bmp
+addJpeg("file") // returns: file.jpeg
+```
+
+## 5 数组与切片
+
+### 5.1 声明和初始化
+
+#### 5.1.1 概念
+
+声明的格式是:
+
+```go
+var identifier [len]type
+```
+
+例如：
+
+```go
+var arr[5] int
+```
+
+- 获得数组中元素数量，使用 `len()`
+- 可以使用 for 的各种操作来访问数组元素
+
+比如：
+
+```go
+package main
+import "fmt"
+
+func main() {
+	var arr1 [5]int
+
+	for i:=0; i < len(arr1); i++ {
+		arr1[i] = i * 2
+	}
+
+	for i:=0; i < len(arr1); i++ {
+		fmt.Printf("Array at index %d is %d\n", i, arr1[i])
+	}
+}
+```
+
+Go 语言中的数组是一种 **值类型**（不像 C/C++ 中是指向首元素的指针），所以可以通过 `new()` 来创建： `var arr1 = new([5]int)`。
+
+那么这种方式和 `var arr2 [5]int` 的区别是什么呢？arr1 的类型是 `*[5]int`，而 arr2的类型是 `[5]int`。
+
+这样的结果就是当把一个数组赋值给另一个时，需要在做一次数组内存的拷贝操作。例如：
+
+```go
+arr2 := *arr1
+arr2[2] = 100
+```
+
+这样两个数组就有了不同的值，在赋值后修改 arr2 不会对 arr1 生效。
+
+所以在函数中数组作为参数传入时，如 `func1(arr2)`，会产生一次数组拷贝，func1 方法不会修改原始的数组 arr2。
+
+如果你想修改原数组，那么 arr2 必须通过&操作符以引用方式传过来，例如 func1(&arr2），下面是一个例子
+
+#### 5.1.2 数组常量
+
+如果数组的值已经提前知道了，可以通过数组常量的方法来初始化数组，而不用依次使用 `[]=` 方法。
+
+1. `var arrAge = [5]int{18, 20, 15, 22, 16}` 直接初始化
+2. `var arrLazy = [...]int{5, 6, 7, 8, 22}` 化成了切片
+3. `var arrKeyValue = [5]string{3: "Chris", 4: "Ron"}` 给具体的下标赋具体的值
+
+几何点（或者数学向量）是一个使用数组的经典例子。为了简化代码通常使用一个别名：
+
+```go
+type Vector3D [3]float32
+var vec Vector3D
+```
+
+#### 5.1.3 多维数组
+
+通过类似于：
+
+```go
+var [3][5] int
+```
+
+可以定义多维数组。
+
+#### 5.1.4 将数组传递给函数
+
+把一个大数组传递给函数会消耗很多内存，有两种方法可以避免这个现象
+
+- 传递数组的指针
+- 传递数组的切片
+
+```go
+package main
+import "fmt"
+func main() {
+	array := [3]float64{7.0, 8.5, 9.1}
+	x := Sum(&array) // Note the explicit address-of operator
+	// to pass a pointer to the array
+	fmt.Printf("The sum of the array is: %f\n", x)
+}
+func Sum(a *[3]float64) (sum float64) {
+	for _, v := range a { // derefencing *a to get back to the array is not necessary!
+		sum += v
+	}
+	return
+}
+```
+
+这是一个传递指针的例子。
+
+### 5.2 切片
+
