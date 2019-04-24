@@ -1631,3 +1631,928 @@ func Sum(a *[3]float64) (sum float64) {
 
 ### 5.2 切片
 
+#### 5.2.1 概念
+
+切片是对数组的一个连续片段的引用，所以切片是一个引用类型，这个片段可以是整个数组也可以是由起始和终止索引标识项的子集。需要注意的是，终止索引标识符的项不在切片内。切片提供了一个相关数组的动态窗口。
+
+切片可以被索引，可以用 `len()` 函数来获取其长度。
+
+切片的长度可以在运行时修改，最小为 0 ，最大为相关数组的长度，**切片是一个长度可变的数组**。
+
+切片提供了计算容量的函数 `cap()` 可以测量切片长度最大可以到达多少：它等于切片长度 + 数组除切片之外的长度。如果 `s` 是一个切片，那么 `cap(s)` 就是从 `s[0]` 到数组末尾的长度。切片的长度永远不会超过它的容量，所以对于切片，一个不等式永远成立：`0 <= len(s) <= cap(s)`
+
+多个切片如果表示同一个数组的片段，它们可以共享数据，因此一个切片和相关数组的其他切片是共享存储的，相反，不同数组总是代表不同存储。数组实际上是切片的构建块。
+
+优点：
+
+- 切片是引用，所以不需要使用额外内存并且比使用数组更有效率，所以在 Go 代码中切片比数组更常用。
+
+- 声明切片的格式是：`var identifier []type` (不需要说明长度)
+
+- 一个切片在初始化之前默认为 nil ,长度为 0
+
+- 切片的初始化格式是：`var slice1 []type = arr1[start:end]`
+
+- 如果某个人写：`var slice1 []type = arr1[:]` 那么 slice1 就等于完整的 arr1 数组（所以这种表示方式是 `arr1[0:len(arr1)]` 的一种缩写）。另外一种表述方式是：`slice1 = &arr1`。
+
+- `arr1[2:]` 和 `arr1[2:len(arr1)]` 相同，都包含了数组从第三个到最后的所有元素
+
+- `arr1[:3]` 和 `arr1[0:3]` 相同，包含了从第一个到第三个元素（不包括第四个）。
+
+- 如果你想去掉 slice1 的最后一个元素，只要 `slice1 = slice1[:len(slice1)-1]`。
+
+- `s2 := s[:]` 是用切片组成的切片，拥有相同的元素，但是仍然指向相同的相关数组。
+
+- 一个切片 s 可以这样扩展到它的大小上限：`s = s[:cap(s)]`，如果再扩大的话就会导致运行时错误
+
+- 对于每一个切片，下面的状态总是成立的：
+
+  ```go
+  s == s[:i] + s[i:] // i是一个整数且: 0 <= i <= len(s)
+  len(s) <= cap(s)
+  ```
+
+- 切片也可以用类似数组的方式初始化：`var x = []int{2, 3, 5, 7, 11}`。这样就创建了一个长度为 5 的数组并且创建了一个相关切片。
+
+```go
+package main
+import "fmt"
+func main() {
+	var arr1 [6]int
+	var slice1 []int = arr1[2:5]
+	for i := 0; i < len(arr1); i++ {
+		arr1[i] = i
+	} //标号填入 0 1 2 3 4 5
+	for i := 0; i < len(slice1); i++ {
+		fmt.Printf("%d is %d\n", i, slice1[i])
+	} //输出 2 3 4
+	fmt.Printf("The length of arr1 is %d\n", len(arr1))       //数组大小
+	fmt.Printf("The length of slice1 is %d\n", len(slice1))   //切片大小
+	fmt.Printf("The capacity of slice1 is %d\n", cap(slice1)) //切片的最大扩展大小
+
+	slice1 = slice1[0:4]
+	for i := 0; i < len(slice1); i++ {
+		fmt.Printf("Slice at %d is %d\n", i, slice1[i])
+	}
+	fmt.Printf("The length of slice1 is %d\n", len(slice1))
+	fmt.Printf("The capacity of slice1 is %d\n", cap(slice1))
+}
+```
+
+- 不要用指针指向 sclice 。切片本身就是一个引用类型，所以他本身就是一个指针
+
+#### 5.2.2 将切片传递给函数
+
+可以看下面的代码：
+
+```go
+package main
+func sum(a []int) int {
+	s := 0
+	for i := 0; i < len(a); i++ {
+		s += a[i]
+	}
+	return s
+}
+func main() {
+	var arr = [5]int{0, 1, 2, 3, 4}
+	println(sum(arr[:]))
+}
+```
+
+把数组切片传成一个引用给函数。
+
+#### 5.2.3 用 `make()` 创建一个切片
+
+相关数组还没有定义时，可以用 make() 函数创建一个切片，同时创建好数组：
+
+```go
+var slice1 []type = make([]type,len)
+```
+
+也可以简写为 `slice1 := make([]type, len)`，这里 `len` 是数组的长度并且也是 `slice` 的初始长度。
+
+所以定义 `s2 := make([]int, 10)`，那么 `cap(s2) == len(s2) == 10`。
+
+make 接受 2 个参数：元素的类型以及切片的元素个数。
+
+如果你想创建一个 slice1，它不占用整个数组，而只是占用以 len 为个数个项，那么只要：`slice1 := make([]type, len, cap)`。
+
+make 的使用方式是：`func make([]T, len, cap)`，其中 cap 是可选参数。
+
+所以下面两种方法可以生成相同的切片:
+
+```go
+make([]int, 50, 100)
+new([100]int)[0:50]
+```
+
+例子：
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+	var slice1 []int = make([]int, 10)
+	for i := 0; i < len(slice1); i++ {
+		slice1[i] = 5 * i
+	}
+	for i := 0; i < len(slice1); i++ {
+		fmt.Printf("%d is %d\n", i, slice1[i])
+	}
+	fmt.Printf("\nThe length of slice1 is %d\n", len(slice1))
+	fmt.Printf("The capacity of slice1 is %d\n", cap(slice1))
+}
+
+```
+
+#### 5.2.4 new() 和 make() 的区别
+
+看起来二者没区别，都是在堆上分配内存，但是他们的行为不同，适用于的类型不同：
+
+- new(T) 为每个新的类型T分配一片内存，初始化为 0 并且返回类型为*T的内存地址：这种方法 **返回一个指向类型为 T，值为 0 的地址的指针**，它适用于值类型如数组和结构体（参见第 10 章）；它相当于 `&T{}`。
+- make(T) **返回一个类型为 T 的初始值**，它只适用于3种内建的引用类型：切片、map 和 channel。
+- new 函数分配内存，make 函数初始化
+
+下面的方法：
+
+```go
+var v []int = make([]int, 10, 50)
+```
+
+或者
+
+```go
+v := make([]int, 10, 50)
+```
+
+这样分配一个有 50 个 int 值的数组，并且创建了一个长度为 10，容量为 50 的 切片 v，该 切片 指向数组的前 10 个元素。
+
+#### 5.2.5 多维切片
+
+和数组一样，切片通常也是一维的，但是也可以由一维组合成高维。通过分片的分片（或者切片的数组），长度可以任意动态变化，所以 Go 语言的多维切片可以任意切分。而且，内层的切片必须单独分配（通过 make 函数）
+
+#### 5.2.6 byte 包
+
+类型 `[]byte` 的切片十分常见，Go 语言有一个 bytes 包专门用来解决这种类型的操作方法。
+
+bytes 包和字符串包十分类似。而且它还包含一个十分有用的类型 Buffer:
+
+```go
+import "bytes"
+
+type Buffer struct {
+	...
+}
+```
+
+这是一个长度可变的 bytes 的 buffer，提供 Read 和 Write 方法，因为读写长度未知的 bytes 最好使用 buffer。
+
+Buffer 可以这样定义：`var buffer bytes.Buffer`。
+
+或者使用 new 获得一个指针：`var r *bytes.Buffer = new(bytes.Buffer)`。
+
+或者通过函数：`func NewBuffer(buf []byte) *Buffer`，创建一个 Buffer 对象并且用 buf 初始化好；NewBuffer 最好用在从 buf 读取的时候使用。
+
+**通过 buffer 串联字符串**
+
+类似于 Java 的 StringBuilder 类。
+
+在下面的代码段中，我们创建一个 buffer，通过 `buffer.WriteString(s)` 方法将字符串 s 追加到后面，最后再通过 `buffer.String()` 方法转换为 string：
+
+```go
+var buffer bytes.Buffer
+for {
+	if s, ok := getNextString(); ok { //method getNextString() not shown here
+		buffer.WriteString(s)
+	} else {
+		break
+	}
+}
+fmt.Print(buffer.String(), "\n")
+```
+
+这种实现方式比使用 `+=` 要更节省内存和 CPU，尤其是要串联的字符串数目特别多的时候。
+
+类似于数组一样，切片也可以使用 `For-range` 结构。
+
+### 5.3 切片重组
+
+我们已经知道切片创建的时候通常比相关数组小，例如：
+
+```go
+slice1 := make([]type, start_length, capacity)
+```
+
+其中 `start_length` 作为切片初始长度而 `capacity` 作为相关数组的长度。
+
+这么做的好处是我们的切片在达到容量上限后可以扩容。改变切片长度的过程称之为切片重组 **reslicing**，做法如下：`slice1 = slice1[0:end]`，其中 end 是新的末尾索引（即长度）。
+
+将切片扩展 1 位可以这么做：
+
+```go
+sl = sl[0:len(sl)+1]
+```
+
+切片可以反复扩展直到占据整个相关数组。
+
+### 5.4 切片的复制与追加
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+	sl_from := []int{1, 2, 3}
+	sl_to := make([]int, 10)
+	n := copy(sl_to, sl_from)
+	fmt.Println(sl_to)
+	fmt.Printf("Copied %d elements\n", n) // n == 3
+
+	sl3 := []int{1, 2, 3}
+	sl3 = append(sl3, 4, 5, 6)
+	fmt.Println(sl3)
+}
+
+```
+
+如上述代码，使用 copy 与 append 可以完成切片的复制与追加
+
+如果想自己掌控 append 的过程，可以手动实现一下:
+
+```go
+func AppendByte(slice []byte, data ...byte) []byte {
+	m := len(slice)
+	n := m + len(data)
+	if n > cap(slice) {
+		newSlice := make([]byte, (n+1)*2)
+		copy(newSlice, slice)
+		slice = newSlice
+	}
+	slice = slice[0:n]
+	copy(slice[m:n], data)
+	return slice
+}
+```
+
+### 5.5 字符串、数组和切片的应用
+
+1. 从字符串生成字节切片
+
+   ```go
+   package main
+   import "fmt"
+   func main() {
+       s := "\u00ff\u754c"
+       for i, c := range s {
+           fmt.Printf("%d:%c ", i, c)
+       }
+   }
+   ```
+
+2. 获取字符串的某一部分：使用 `substr := str[start:end]` 可以从字符串 str 获取到从索引 start 开始到 `end-1` 位置的子字符串。同样的，`str[start:]` 则表示获取从 start 开始到 `len(str)-1` 位置的子字符串。而 `str[:end]` 表示获取从 0 开始到 `end-1` 的子字符串。
+
+3. 修改字符串中的某一个字符:
+
+   Go 语言中的字符串是不可变的，也就是说 `str[index]` 这样的表达式是不可以被放在等号左侧的。如果尝试运行 `str[i] = 'D'` 会得到错误：`cannot assign to str[i]`。
+
+   因此，您必须先将字符串转换成字节数组，然后再通过修改数组中的元素值来达到修改字符串的目的，最后将字节数组转换回字符串格式。
+
+   例如，将字符串 "hello" 转换为 "cello"：
+
+   ```go
+   s := "hello"
+   c := []byte(s)
+   c[0] = 'c'
+   s2 := string(c) // s2 == "cello"
+   ```
+
+   所以，您可以通过操作切片来完成对字符串的操作
+
+4. 字节数组对比函数
+
+   下面的函数可以比较两个数组的字典序大小：
+
+   ```go
+   func Compare(a, b []byte) int {
+   	for i := 0; i < len(a) && i < len(b); i++ {
+   		switch {
+   		case a[i] > b[i]:
+   			return 1
+   		case a[i] < b[i]:
+   			return -1
+   		}
+   	}
+   	// 数组的长度可能不同
+   	switch {
+   	case len(a) < len(b):
+   		return -1
+   	case len(a) > len(b):
+   		return 1
+   	}
+   	return 0 // 数组相等
+   }
+   ```
+
+5. 搜索及排序切片和数组
+
+   标准库提供了 `sort` 包来实现常见的搜索和排序操作。您可以使用 `sort` 包中的函数 `func Ints(a []int)` 来实现对 int 类型的切片排序。例如 `sort.Ints(arri)`，其中变量 arri 就是需要被升序排序的数组或切片。为了检查某个数组是否已经被排序，可以通过函数 `IntsAreSorted(a []int) bool` 来检查，如果返回 true 则表示已经被排序。
+
+   类似的，可以使用函数 `func Float64s(a []float64)` 来排序 float64 的元素，或使用函数 `func Strings(a []string)`排序字符串元素。
+
+   想要在数组或切片中搜索一个元素，该数组或切片必须先被排序（因为标准库的搜索算法使用的是二分法）。然后，您就可以使用函数 `func SearchInts(a []int, n int) int` 进行搜索，并返回对应结果的索引值。
+
+6. append 函数常见操作
+
+   - 将切片 b 的元素追加到切片 a 之后：`a = append(a,b...)`
+
+   - 复制切片 a 的元素到新的切片 b 上：
+
+     ```go
+     b = make([]T,len(a))
+     copy(b,a)
+     ```
+
+   - 删除位于索引 i 的元素：`a = append(a[:i],a[i+1:]...)`
+
+     ```go
+     package main
+     import "fmt"
+     func main() {
+     	a := []int{1, 2, 3, 4}
+     	a = append(a[:2], a[3:]...) //append第二个参数需要接受一个可变长参数，使用a[3:]...把切片打散
+     	fmt.Println(a)
+     }
+     ```
+
+   - 切除切片 a 中从索引 i 至 j 位置的元素：`a = append(a[:i], a[j:]...)`
+
+   - 为切片 a 扩展 j 个元素长度：`a = append(a, make([]T, j)...)`
+
+   - 在索引 i 的位置插入元素 x：`a = append(a[:i], append([]T{x}, a[i:]...)...)`
+
+   - 在索引 i 的位置插入长度为 j 的新切片：`a = append(a[:i], append(make([]T, j), a[i:]...)...)`
+
+   - 在索引 i 的位置插入切片 b 的所有元素：`a = append(a[:i], append(b, a[i:]...)...)`
+
+   - 取出位于切片 a 最末尾的元素 x：`x, a = a[len(a)-1], a[:len(a)-1]`
+
+   - 将元素 x 追加到切片 a：`a = append(a, x)`
+
+## 6 Map
+
+map 是一种特殊的数据结构：一种元素对（pair）的无序集合，pair 的一个元素是 key，对应的另一个元素是 value，所以这个结构也称为关联数组或字典。这是一种快速寻找值的理想结构：给定 key，对应的 value 可以迅速定位。
+
+map 这种数据结构在其他编程语言中也称为字典（Python）、hash 和 HashTable 等。
+
+### 6.1 概念
+
+未初始化的 map 的值是 nil
+
+map 是引用类型，可以使用如下声明：
+
+```go
+var map1 map[keytype]valuetype
+var map1 map[string]int
+```
+
+（`[keytype]` 和 `valuetype` 之间允许有空格，但是 gofmt 移除了空格）
+
+在声明的时候不需要知道 map 的长度，map 是可以动态增长的。
+
+未初始化的 map 的值是 nil。
+
+key 可以是任意可以用 == 或者 != 操作符比较的类型，比如 string、int、float。所以数组、切片和结构体不能作为 key (译者注：含有数组切片的结构体不能作为 key，只包含内建类型的 struct 是可以作为 key 的），但是指针和接口类型可以。如果要用结构体作为 key 可以提供 `Key()` 和 `Hash()` 方法，这样可以通过结构体的域计算出唯一的数字或者字符串的 key。
+
+- Value 可以是任意类型的
+- 使用 map 比线性查找快，但是比数组和切片索引慢得多
+
+令 `v := map1[key1]` 可以将 key1 对应的值赋值给 v；如果 map 中没有 key1 存在，那么 v 将被赋值为 map1 的值类型的空值。
+
+常用的 `len(map1)` 方法可以获得 map 中的 pair 数目，这个数目是可以伸缩的，因为 map-pairs 在运行时可以动态添加和删除。
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+	var mapLit map[string]int
+	var mapAssigned map[string]int
+
+	mapLit = map[string]int{"one": 1, "two": 2}
+	mapCreated := make(map[string]float32)
+	mapAssigned = mapLit
+
+	mapCreated["key1"] = 4.5
+	mapCreated["key2"] = 3.14159
+	mapAssigned["two"] = 3
+
+	fmt.Printf("Map literal at \"one\" is: %d\n", mapLit["one"])
+	fmt.Printf("Map created at \"key2\" is: %f\n", mapCreated["key2"])
+	fmt.Printf("Map assigned at \"two\" is: %d\n", mapLit["two"])
+	fmt.Printf("Map literal at \"ten\" is: %d\n", mapLit["ten"])
+}
+
+```
+
+上面是一个 map 的使用例子。
+
+**不要使用 new，永远用 make 来构造 map**
+
+map 的 value 甚至可以是函数，比如：
+
+```go
+package main
+import "fmt"
+func main() {
+	mf := map[int]func() int{
+		1: func() int { return 10 },
+		2: func() int { return 20 },
+		5: func() int { return 50 },
+	}
+	fmt.Println(mf)
+	fmt.Printf("%d", mf[2]())
+}
+```
+
+### 6.2 map 容量
+
+和数组不同，map 可以根据新增的 key-value 对动态的伸缩，因此它不存在固定长度或者最大限制。但是你也可以选择标明 map 的初始容量 `capacity`，就像这样：`make(map[keytype]valuetype, cap)`。例如：
+
+```go
+map2 := make(map[string]float32, 100)
+```
+
+当 map 增长到容量上限的时候，如果再增加新的 key-value 对，map 的大小会自动加 1。所以出于性能的考虑，对于大的 map 或者会快速扩张的 map，即使只是大概知道容量，也最好先标明。
+
+这里有一个 map 的具体例子，即将音阶和对应的音频映射起来：
+
+```go
+noteFrequency := map[string]float32 {
+	"C0": 16.35, "D0": 18.35, "E0": 20.60, "F0": 21.83,
+	"G0": 24.50, "A0": 27.50, "B0": 30.87, "A4": 440}
+```
+
+### 6.3 用切片作为 map 的值
+
+既然一个 key 只能对应一个 value，而 value 又是一个原始类型，那么如果一个 key 要对应多个值怎么办？例如，当我们要处理unix机器上的所有进程，以父进程（pid 为整形）作为 key，所有的子进程（以所有子进程的 pid 组成的切片）作为 value。通过将 value 定义为 `[]int` 类型或者其他类型的切片，就可以优雅的解决这个问题。
+
+这里有一些定义这种 map 的例子：
+
+```go
+mp1 := make(map[int][]int)
+mp2 := make(map[int]*[]int)
+```
+
+### 6.4 测试键值对是否存在以及删除元素
+
+为了解决这个问题，我们可以这么用：`val1, isPresent = map1[key1]`
+
+isPresent 返回一个 bool 值：如果 key1 存在于 map1，val1 就是 key1 对应的 value 值，并且 isPresent为true；如果 key1 不存在，val1 就是一个空值，并且 isPresent 会返回 false。
+
+如果你只是想判断某个 key 是否存在而不关心它对应的值到底是多少，你可以这么做：
+
+```go
+_, ok := map1[key1] // 如果key1存在则ok == true，否则ok为false
+```
+
+或者和 if 混合使用：
+
+```go
+if _, ok := map1[key1]; ok {
+	// ...
+}
+```
+
+从 map1 中删除 key1：
+
+直接 `delete(map1, key1)` 就可以。
+
+如果 key1 不存在，该操作不会产生错误。
+
+```go
+package main
+import "fmt"
+
+func main() {
+	var value int
+	var isPresent bool
+	map1 := make(map[string]int)
+	map1["New Delhi"] = 55
+	map1["Beijing"] = 20
+	map1["Washington"] = 25
+	value, isPresent = map1["Beijing"]
+	if isPresent {
+		fmt.Printf("The value of \"Beijing\" in map1 is: %d\n", value)
+	} else {
+		fmt.Printf("map1 does not contain Beijing")
+	}
+	value, isPresent = map1["Paris"]
+	fmt.Printf("Is \"Paris\" in map1 ?: %t\n", isPresent)
+	fmt.Printf("Value is: %d\n", value)
+	// delete an item:
+	delete(map1, "Washington")
+	value, isPresent = map1["Washington"]
+	if isPresent {
+		fmt.Printf("The value of \"Washington\" in map1 is: %d\n", value)
+	} else {
+		fmt.Println("map1 does not contain Washington")
+	}
+}
+```
+
+### 6.5 for-range 的配套用法
+
+可以使用 for 循环构造 map：
+
+```go
+for key, value := range map1 {
+	...
+}
+```
+
+第一个返回值 key 是 map 中的 key 值，第二个返回值则是该 key 对应的 value 值；这两个都是仅 for 循环内部可见的局部变量。其中第一个返回值key值是一个可选元素。如果你只关心值，可以这么使用：
+
+```go
+for _, value := range map1 {
+	...
+}
+```
+
+如果只想获取 key，你可以这么使用：
+
+```go
+for key := range map1 {
+	fmt.Printf("key is: %d\n", key)
+}
+```
+
+### 6.7 map 类型的切片
+
+假设我们想获取一个 map 类型的切片，我们必须使用两次 `make()` 函数，第一次分配切片，第二次分配 切片中每个 map 元素
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+	// Version A:
+	items := make([]map[int]int, 5)
+	for i := range items {
+		items[i] = make(map[int]int, 1)
+		items[i][1] = 2
+	}
+	fmt.Printf("Version A: Value of items: %v\n", items)
+
+	// Version B: NOT GOOD!
+	items2 := make([]map[int]int, 5)
+	for _, item := range items2 {
+		item = make(map[int]int, 1) // item is only a copy of the slice element.
+		item[1] = 2                 // This 'item' will be lost on the next iteration.
+	}
+	fmt.Printf("Version B: Value of items: %v\n", items2)
+}
+
+// 运行结果：
+// Version A: Value of items: [map[1:2] map[1:2] map[1:2] map[1:2] map[1:2]]
+// Version B: Value of items: [map[] map[] map[] map[] map[]]
+```
+
+应当像 A 版本那样通过索引使用切片的 map 元素。在 B 版本中获得的项只是 map 值的一个拷贝而已，所以真正的 map 元素没有得到初始化。
+
+### 6.8 map 的排序
+
+map 默认是无序的，不管是按照 key 还是按照 value 默认都不排序（详见第 8.3 节）。
+
+如果你想为 map 排序，需要将 key（或者 value）拷贝到一个切片，再对切片排序（使用 sort 包，详见第 7.6.6 节），然后可以使用切片的 for-range 方法打印出所有的 key 和 value。
+
+比如以下的例子：
+
+```go
+package main
+
+import (
+	"fmt"
+	"sort"
+)
+
+var (
+	barVal = map[string]int{"alpha": 34, "bravo": 56, "charlie": 23,
+		"delta": 87, "echo": 56, "foxtrot": 12,
+		"golf": 34, "hotel": 16, "indio": 87,
+		"juliet": 65, "kili": 43, "lima": 98}
+)
+func main() {
+	fmt.Println("unsorted:")
+	for k, v := range barVal {
+		fmt.Printf("Key: %v, Value: %v / ", k, v)
+	}
+	keys := make([]string, len(barVal))
+	i := 0
+	for k, _ := range barVal {
+		keys[i] = k
+		i++
+	}
+	sort.Strings(keys)
+	fmt.Println()
+	fmt.Println("sorted:")
+	for _, k := range keys {
+		fmt.Printf("Key: %v, Value: %v / ", k, barVal[k])
+	}
+}
+```
+
+## 7 包
+
+### 7.1 基本介绍
+
+像 `fmt`、`os` 等这样具有常用功能的内置包在 Go 语言中有 150 个以上，它们被称为标准库，大部分(一些底层的除外)内置于 Go 本身。完整列表可以在 [Go Walker](https://gowalker.org/search?q=gorepos) 查看。
+
+- `unsafe`: 包含了一些打破 Go 语言“类型安全”的命令，一般的程序中不会被使用，可用在 C/C++ 程序的调用中。
+
+- `syscall`-`os`-`os/exec`:
+
+  - `os`: 提供给我们一个平台无关性的操作系统功能接口，采用类Unix设计，隐藏了不同操作系统间差异，让不同的文件系统和操作系统对象表现一致。
+  - `os/exec`: 提供我们运行外部操作系统命令和程序的方式。
+  - `syscall`: 底层的外部包，提供了操作系统底层调用的基本接口。
+
+- `archive/tar` 和 `/zip-compress`：压缩(解压缩)文件功能。
+
+- `fmt`-`io`-`bufio`-`path/filepath`-`flag`:
+
+  - `fmt`: 提供了格式化输入输出功能。
+  - `io`: 提供了基本输入输出功能，大多数是围绕系统功能的封装。
+  - `bufio`: 缓冲输入输出功能的封装。
+  - `path/filepath`: 用来操作在当前系统中的目标文件名路径。
+  - `flag`: 对命令行参数的操作。
+
+- `strings`-`strconv`-`unicode`-`regexp`-`bytes`:
+
+  - `strings`: 提供对字符串的操作。
+  - `strconv`: 提供将字符串转换为基础类型的功能。
+  - `unicode`: 为 unicode 型的字符串提供特殊的功能。
+  - `regexp`: 正则表达式功能。
+  - `bytes`: 提供对字符型分片的操作。
+  - `index/suffixarray`: 子字符串快速查询
+
+- `math`-`math/cmath`-`math/big`-`math/rand`-`sort`:
+
+  - `math`: 基本的数学函数。
+  - `math/cmath`: 对复数的操作。
+  - `math/rand`: 伪随机数生成。
+  - `sort`: 为数组排序和自定义集合。
+  - `math/big`: 大数的实现和计算
+
+- `container`-`/list-ring-heap`: 实现对集合的操作
+
+  - `list`: 双链表。
+  - `ring`: 环形链表。
+
+  下面代码演示了如何遍历一个链表(当 l 是 `*List`)：
+
+  ```go
+  for e := l.Front(); e != nil; e = e.Next() {
+  	//do something with e.Value
+  }
+  ```
+
+- `time`-`log`:
+
+  - `time`: 日期和时间的基本操作。
+  - `log`: 记录程序运行时产生的日志,我们将在后面的章节使用它
+
+- `encoding/json`-`encoding/xml`-`text/template`:
+
+  - `encoding/json`: 读取并解码和写入并编码 JSON 数据。
+  - `encoding/xml`:简单的 XML1.0 解析器,有关 JSON 和 XML 的实例请查阅第 12.9/10 章节。
+  - `text/template`:生成像 HTML 一样的数据与文本混合的数据驱动模板
+
+- `net`-`net/http`-`html`:
+
+  - `net`: 网络数据的基本操作。
+  - `http`: 提供了一个可扩展的 HTTP 服务器和基础客户端，解析 HTTP 请求和回复。
+  - `html`: HTML5 解析器。
+
+- `runtime`: Go 程序运行时的交互操作，例如垃圾回收和协程创建。
+
+- `reflect`: 实现通过程序运行时反射，让程序操作任意类型的变量
+
+### 7.2 regexp 包
+
+在下面的程序里，我们将在字符串中对正则表达式进行匹配。
+
+如果是简单模式，使用 `Match` 方法便可：
+
+```go
+ok, _ := regexp.Match(pat, []byte(searchIn))
+```
+
+变量 ok 将返回 true 或者 false,我们也可以使用 `MatchString`：
+
+```go
+ok, _ := regexp.MatchString(pat, searchIn)
+```
+
+更多方法中，必须先将正则通过 `Compile` 方法返回一个 Regexp 对象。然后我们将掌握一些匹配，查找，替换相关的功能。
+
+```go
+package main
+
+import (
+	"fmt"
+	"regexp"
+	"strconv"
+)
+
+func main() {
+	sea := "John: 2578.34 William: 4567.23 Steve: 5632.18"
+	pat := "[0-9]+.[0-9]+"
+	f := func(s string) string {
+		v, _ := strconv.ParseFloat(s, 32)
+		return strconv.FormatFloat(v*2, 'f', 2, 32)
+	}
+	if ok, _ := regexp.Match(pat, []byte(sea)); ok {
+		fmt.Println("Match Found")
+	}
+	re, _ := regexp.Compile(pat)
+	str := re.ReplaceAllString(sea, "##.#")
+	fmt.Println(str)
+	str2 := re.ReplaceAllStringFunc(sea, f)
+	fmt.Println(str2)
+}
+
+// 运行结果：
+// Match Found
+// John: ##.# William: ##.# Steve: ##.#
+// John: 5156.68 William: 9134.46 Steve: 11264.36
+
+```
+
+以上是使用的例子
+
+### 7.3 锁和 sync 包
+
+在一些复杂的程序中，通常通过不同线程执行不同应用来实现程序的并发。当不同线程要使用同一个变量时，经常会出现一个问题：无法预知变量被不同线程修改的顺序！(这通常被称为资源竞争,指不同线程对同一变量使用的竞争)显然这无法让人容忍，那我们该如何解决这个问题呢？
+
+经典的做法是一次只能让一个线程对共享变量进行操作。当变量被一个线程改变时(临界区)，我们为它上锁，直到这个线程执行完成并解锁后，其他线程才能访问它。
+
+特别是我们之前章节学习的 map 类型是不存在锁的机制来实现这种效果(出于对性能的考虑)，所以 map 类型是非线程安全的。当并行访问一个共享的 map 类型的数据，map 数据将会出错。
+
+在 Go 语言中这种锁的机制是通过 sync 包中 Mutex 来实现的。sync 来源于 "synchronized" 一词，这意味着线程将有序的对同一变量进行访问。
+
+`sync.Mutex` 是一个互斥锁，它的作用是守护在临界区入口来确保同一时间只能有一个线程进入临界区。
+
+假设 info 是一个需要上锁的放在共享内存中的变量。通过包含 `Mutex` 来实现的一个典型例子如下：
+
+```go
+import  "sync"
+
+type Info struct {
+	mu sync.Mutex
+	// ... other fields, e.g.: Str string
+}
+```
+
+如果一个函数想要改变这个变量可以这样写:
+
+```go
+func Update(info *Info) {
+	info.mu.Lock()
+    // critical section:
+    info.Str = // new value
+    // end critical section
+    info.mu.Unlock()
+}
+```
+
+还有一个很有用的例子是通过 Mutex 来实现一个可以上锁的共享缓冲器:
+
+```go
+type SyncedBuffer struct {
+	lock 	sync.Mutex
+	buffer  bytes.Buffer
+}
+```
+
+在 sync 包中还有一个 `RWMutex` 锁：他能通过 `RLock()` 来允许同一时间多个线程对变量进行读操作，但是只能一个线程进行写操作。如果使用 `Lock()` 将和普通的 `Mutex` 作用相同。包中还有一个方便的 `Once` 类型变量的方法 `once.Do(call)`，这个方法确保被调用函数只能被调用一次。
+
+### 7.4 精密计算和 big 包
+
+我们知道有些时候通过编程的方式去进行计算是不精确的。如果你使用 Go 语言中的 float64 类型进行浮点运算，返回结果将精确到 15 位，足以满足大多数的任务。当对超出 int64 或者 uint64 类型这样的大数进行计算时，如果对精度没有要求，float32 或者 float64 可以胜任，但如果对精度有严格要求的时候，我们不能使用浮点数，在内存中它们只能被近似的表示。
+
+对于整数的高精度计算 Go 语言中提供了 big 包。其中包含了 math 包：有用来表示大整数的 `big.Int` 和表示大有理数的 `big.Rat` 类型（可以表示为 2/5 或 3.1416 这样的分数，而不是无理数或 π）。这些类型可以实现任意位类型的数字，只要内存足够大。缺点是更大的内存和处理开销使它们使用起来要比内置的数字类型慢很多。
+
+大的整型数字是通过 `big.NewInt(n)` 来构造的，其中 n 为 int64 类型整数。而大有理数是通过 `big.NewRat(N,D)` 方法构造。N（分子）和 D（分母）都是 int64 型整数。因为 Go 语言不支持运算符重载，所以所有大数字类型都有像是 `Add()`和 `Mul()` 这样的方法。它们作用于作为 receiver 的整数和有理数，大多数情况下它们修改 receiver 并以 receiver 作为返回结果。因为没有必要创建 `big.Int` 类型的临时变量来存放中间结果，所以这样的运算可通过内存链式存储。
+
+```go
+package main
+
+import (
+	"fmt"
+	"math"
+	"math/big"
+)
+
+func main() {
+	// Here are some calculations with bigInts:
+	im := big.NewInt(math.MaxInt64)
+	in := im
+	io := big.NewInt(1956)
+	ip := big.NewInt(1)
+	ip.Mul(im, in).Add(ip, im).Div(ip, io) //a.ADD(b,c)的意思是，把b+c的值赋值给a
+	fmt.Printf("Big Int: %v\n", ip)
+	// Here are some calculations with bigInts:
+	rm := big.NewRat(math.MaxInt64, 1956)
+	rn := big.NewRat(-1956, math.MaxInt64)
+	ro := big.NewRat(19, 56)
+	rp := big.NewRat(1111, 2222)
+	rq := big.NewRat(1, 1)
+	rq.Mul(rm, rn).Add(rq, ro).Mul(rq, rp)
+	fmt.Printf("Big Rat: %v\n", rq)
+}
+
+```
+
+### 7.5 自定义包及可见性
+
+包是 Go 语言中代码组织和代码编译的主要方式。当写自己包的时候，要使用短小的不含有 `_`(下划线)的小写单词来为文件命名。
+
+import 的一般格式如下:
+
+```go
+import "包的路径或 URL 地址" 
+```
+
+例如：
+
+```go
+import "github.com/org1/pack1”
+```
+
+路径是指当前目录的相对路径。
+
+大概总结一下 GoLang 自定义包，并不是需要发布的包，只是一次在代码工作路径下调用自定义包的一个尝试。
+
+> 以为 import 的时候要填写文件夹里面的 package 的名称，比如之前我是这么写的：
+>
+> ```go
+> import "./pack/p"
+> ```
+>
+> 这样无法通过编译，这就是本文的由来了
+
+首先，工作的目录结构是这样的：
+
+```
+.
+├── main.go
+└── pack
+    └── test.go
+
+1 directory, 2 files
+```
+
+其中，各个文件代码为：
+
+```go
+// main.go
+package main
+import (
+        "fmt"
+       "./pack"
+)
+func main() {
+        s := p.Sayhello()
+        fmt.Println(s)
+}
+```
+
+``` go
+// pack/test.go
+package p
+
+func Sayhello() string {
+        return "Hello!"
+}
+```
+
+在主目录下通过 `go run` 或者 `go build` 的方法运行或编译，都是可以通过的。
+
+证明了以下几点：
+
+- import 语句使用的是文件夹的名称
+  - 上面的文件夹名字为 `pack`
+- 文件夹名称和 package 名称不一定一样
+  - 比如 `pack` 和 `p`
+- 调用自定义包使用 `package.函数名` 的方式
+  - `p.xxx`
+- 自定义包的调用和文件名没有关系。
+  - `test.go` 和 `p` 没有关系
+
+## 8 结构（struct）与方法（method）
+
