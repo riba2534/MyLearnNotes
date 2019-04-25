@@ -2556,3 +2556,1111 @@ func Sayhello() string {
 
 ## 8 结构（struct）与方法（method）
 
+### 8.1 结构体定义
+
+结构体定义的一般方式如下：
+
+```go
+type identifier struct {
+    field1 type1
+    field2 type2
+    ...
+}
+```
+
+`type T struct {a, b int}` 也是合法的语法，它更适用于简单的结构体。
+
+结构体里的字段都有 **名字**，像 field1、field2 等，如果字段在代码中从来也不会被用到，那么可以命名它为 **_**。
+
+结构体的字段可以是任何类型，甚至是结构体本身，也可以是函数或者接口（参考第 11 章）。可以声明结构体类型的一个变量，然后像下面这样给它的字段赋值：
+
+```go
+var s T
+s.a = 5
+s.b = 8
+```
+
+数组可以看作是一种结构体类型，不过它使用下标而不是具名的字段。
+
+**使用 new**
+
+使用 **new** 函数给一个新的结构体变量分配内存，它返回指向已分配内存的指针：`var t *T = new(T)`，如果需要可以把这条语句放在不同的行（比如定义是包范围的，但是分配却没有必要在开始就做）。
+
+```go
+var t *T
+t = new(T)
+```
+
+写这条语句的惯用方法是：`t := new(T)`，变量 `t` 是一个指向 `T`的指针，此时结构体字段的值是它们所属类型的零值。
+
+声明 `var t T` 也会给 `t` 分配内存，并零值化内存，但是这个时候 `t` 是类型T。在这两种方式中，`t` 通常被称做类型 T 的一个实例（instance）或对象（object）。
+
+```go
+package main
+import "fmt"
+type struct1 struct {
+	i1  int
+	f1  float32
+	str string
+}
+func main() {
+	ms := new(struct1)
+	ms.i1 = 10
+	ms.f1 = 15.5
+	ms.str = "Chris"
+
+	fmt.Printf("%d\n%f\n%s\n", ms.i1, ms.f1, ms.str)
+	fmt.Println(ms)
+}
+```
+
+上面的例子是一个简单的结构体的使用方法。
+
+初始化一个结构体实例（一个结构体字面量：struct-literal）的更简短和惯用的方式如下：
+
+```go
+    ms := &struct1{10, 15.5, "Chris"}
+    // 此时ms的类型是 *struct1
+```
+
+或者：
+
+```go
+    var ms struct1
+    ms = struct1{10, 15.5, "Chris"}
+```
+
+混合字面量语法（composite literal syntax）`&struct1{a, b, c}` 是一种简写，底层仍然会调用 `new ()`，这里值的顺序必须按照字段顺序来写。在下面的例子中能看到可以通过在值的前面放上字段名来初始化字段的方式。表达式 `new(Type)`和 `&Type{}` 是等价的。
+
+时间间隔（开始和结束时间以秒为单位）是使用结构体的一个典型例子：
+
+```go
+type Interval struct {
+    start int
+    end   int
+}
+```
+
+初始化方式：
+
+```go
+intr := Interval{0, 3}            (A)
+intr := Interval{end:5, start:1}  (B)
+intr := Interval{end:5}           (C)
+```
+
+```go
+package main
+
+import (
+	"fmt"
+	"strings"
+)
+
+type Person struct {
+	firstName string
+	lastName  string
+}
+
+func upPerson(p *Person) {
+	p.firstName = strings.ToUpper(p.firstName)
+	p.lastName = strings.ToUpper(p.lastName)
+}
+
+func main() {
+	var pers1 Person
+	pers1.firstName = "Chris"
+	pers1.lastName = "Woodward"
+	upPerson(&pers1)
+	fmt.Printf("%s %s\n", pers1.firstName, pers1.lastName)
+
+	pers2 := new(Person)
+	pers2.firstName = "Chris"
+	pers2.lastName = "Woodward"
+	(*pers2).lastName = "Woodward" //这是合法的
+	upPerson(pers2)
+	fmt.Printf("%s %s\n", pers2.firstName, pers2.lastName)
+
+	pers3 := &Person{"Chris", "Woodward"}
+	upPerson(pers3)
+	fmt.Printf("%s %s\n", pers3.firstName, pers3.lastName)
+}
+```
+
+上面的代码可以表现出三种初始化方法。
+
+**结构体的内存布局**
+
+Go 语言中，结构体和它所包含的数据在内存中是以连续块的形式存在的，即使结构体中嵌套有其他的结构体，这在性能上带来了很大的优势。不像 Java 中的引用类型，一个对象和它里面包含的对象可能会在不同的内存空间中，这点和 Go 语言中的指针很像。下面的例子清晰地说明了这些情况：
+
+```go
+type Rect1 struct {Min, Max Point }
+type Rect2 struct {Min, Max *Point }
+```
+
+### 8.2 使用工厂方法构建结构体实例
+
+#### 8.2.1 结构体工厂
+
+Go 语言不支持面向对象编程语言中那样的构造子方法，但是可以很容易的在 Go 中实现 “构造子工厂”方法。为了方便通常会为类型定义一个工厂，按惯例，工厂的名字以 new 或 New 开头。假设定义了如下的 File 结构体类型：
+
+```go
+type File struct {
+    fd      int     // 文件描述符
+    name    string  // 文件名
+}
+```
+
+下面是这个结构体类型对应的工厂方法，它返回一个指向结构体实例的指针：
+
+```go
+func NewFile(fd int, name string) *File {
+    if fd < 0 {
+        return nil
+    }
+    return &File{fd, name}
+}
+```
+
+然后这样调用它：
+
+```go
+f := NewFile(10, "./test.txt")
+```
+
+在 Go 语言中常常像上面这样在工厂方法里使用初始化来简便的实现构造函数。
+
+如果 `File` 是一个结构体类型，那么表达式 `new(File)` 和 `&File{}` 是等价的。
+
+这可以和大多数面向对象编程语言中笨拙的初始化方式做个比较：`File f = new File(...)`。
+
+我们可以说是工厂实例化了类型的一个对象，就像在基于类的OO语言中那样。
+
+如果想知道结构体类型T的一个实例占用了多少内存，可以使用：`size := unsafe.Sizeof(T{})`。
+
+**如何强制使用工厂方法**
+
+通过应用可见性规则参考就可以禁止使用 new 函数，强制用户使用工厂方法，从而使类型变成私有的，就像在面向对象语言中那样。
+
+```go
+type matrix struct {
+    ...
+}
+func NewMatrix(params) *matrix {
+    m := new(matrix) // 初始化 m
+    return m
+}
+```
+
+在其他包里使用工厂方法：
+
+```go
+package main
+import "matrix"
+...
+wrong := new(matrix.matrix)     // 编译失败（matrix 是私有的）
+right := matrix.NewMatrix(...)  // 实例化 matrix 的唯一方式
+```
+
+#### 8.2.2 map 和 struct 中的 new() 和 make()
+
+```go
+package main
+type Foo map[string]string
+type Bar struct {
+	thingOne string
+	thingTwo int
+}
+func main() {
+	// OK
+	y := new(Bar)
+	(*y).thingOne = "hello"
+	(*y).thingTwo = 1
+	// NOT OK
+	z := make(Bar) // 编译错误：cannot make type Bar
+	(*z).thingOne = "hello"
+	(*z).thingTwo = 1
+	// OK
+	x := make(Foo)
+	x["x"] = "goodbye"
+	x["y"] = "world"
+	// NOT OK
+	u := new(Foo)
+	(*u)["x"] = "goodbye" // 运行时错误!! panic: assignment to entry in nil map
+	(*u)["y"] = "world"
+}
+```
+
+试图 `make()` 一个结构体变量，会引发一个编译错误，这还不是太糟糕，但是 `new()` 一个映射并试图使用数据填充它，将会引发运行时错误！ 因为 `new(Foo)` 返回的是一个指向 `nil` 的指针，它尚未被分配内存。所以在使用 `map` 时要特别谨慎。
+
+### 8.3 使用自定义包中的结构体
+
+目录结构是这样：
+
+```go
+.
+├── main.go
+└── struct_pack
+    └── structPack.go
+1 directory, 2 files
+```
+
+文件内容如下：
+
+```go
+//main.go
+package main
+import (
+	"fmt"
+	structPack "./struct_pack"
+)
+func main() {
+	struct1 := new(structPack.ExpStruct)
+	struct1.Mi1 = 10
+	struct1.Mf1 = 16.
+
+	fmt.Printf("Mi1 = %d\n", struct1.Mi1)
+	fmt.Printf("Mf1 = %f\n", struct1.Mf1)
+}
+
+```
+
+```go
+//structPack.go
+package structPack
+type ExpStruct struct {
+	Mi1 int
+	Mf1 float32
+}
+```
+
+输出：
+
+```go
+Mi1 = 10
+Mf1 = 16.000000
+```
+
+### 8.4 匿名字段和内嵌结构体
+
+结构体可以包含一个或多个 **匿名（或内嵌）字段**，即这些字段没有显式的名字，只有字段的类型是必须的，此时类型就是字段的名字。匿名字段本身可以是一个结构体类型，即 **结构体可以包含内嵌结构体**。
+
+可以粗略地将这个和面向对象语言中的继承概念相比较，随后将会看到它被用来模拟类似继承的行为。Go 语言中的继承是通过内嵌或组合来实现的，所以可以说，在 Go 语言中，相比较于继承，组合更受青睐。
+
+```go
+package main
+import "fmt"
+type innerS struct {
+	in1 int
+	in2 int
+}
+type outerS struct {
+	b      int
+	c      float32
+	int    // anonymous field
+	innerS //anonymous field
+}
+func main() {
+	outer := new(outerS)
+	outer.b = 6
+	outer.c = 7.5
+	outer.int = 60
+	outer.in1 = 5
+	outer.in2 = 10
+	fmt.Printf("outer.b is: %d\n", outer.b)
+	fmt.Printf("outer.c is: %f\n", outer.c)
+	fmt.Printf("outer.int is: %d\n", outer.int)
+	fmt.Printf("outer.in1 is: %d\n", outer.in1)
+	fmt.Printf("outer.in2 is: %d\n", outer.in2)
+	// 使用结构体字面量
+	outer2 := outerS{6, 7.5, 60, innerS{5, 10}}
+	fmt.Println("outer2 is:", outer2)
+}
+```
+
+命名冲突：
+
+当两个字段拥有相同的名字（可能是继承来的名字）时该怎么办呢？
+
+1. 外层名字会覆盖内层名字（但是两者的内存空间都保留），这提供了一种重载字段或方法的方式；
+2. 如果相同的名字在同一级别出现了两次，如果这个名字被程序使用了，将会引发一个错误（不使用没关系）。没有办法来解决这种问题引起的二义性，必须由程序员自己修正。
+
+例子：
+
+```go
+type A struct {a int}
+type B struct {a, b int}
+
+type C struct {A; B}
+var c C
+```
+
+规则 2：使用 `c.a` 是错误的，到底是 `c.A.a` 还是 `c.B.a` 呢？会导致编译器错误：**ambiguous DOT reference c.a disambiguate with either c.A.a or c.B.a**。
+
+```go
+type D struct {B; b float32}
+var d D
+```
+
+规则1：使用 `d.b` 是没问题的：它是 float32，而不是 `B` 的 `b`。如果想要内层的 `b` 可以通过 `d.B.b` 得到。
+
+### 8.5 方法
+
+#### 8.5.1 方法介绍
+
+在 Go 语言中，结构体就像是类的一种简化形式，那么面向对象程序员可能会问：类的方法在哪里呢？在 Go 中有一个概念，它和方法有着同样的名字，并且大体上意思相同：Go 方法是作用在接收者（receiver）上的一个函数，接收者是某种类型的变量。因此方法是一种特殊类型的函数。
+
+定义方法的一般格式为：
+
+```go
+func (a *denseMatrix) Add(b Matrix) Matrix
+func (a *sparseMatrix) Add(b Matrix) Matrix
+```
+
+用一个例子来作说明：
+
+```go
+package main
+
+import "fmt"
+
+type TwoInts struct {
+	a int
+	b int
+}
+func main() {
+	two1 := new(TwoInts)
+	two1.a = 12
+	two1.b = 10
+	fmt.Printf("The sum is: %d\n", two1.AddThem())
+	fmt.Printf("Add them to the param: %d\n", two1.AddToParam(20))
+	two2 := TwoInts{3, 4}
+	fmt.Printf("The sum is: %d\n", two2.AddThem())
+}
+func (tn *TwoInts) AddThem() int {
+	return tn.a + tn.b
+}
+func (tn *TwoInts) AddToParam(param int) int {
+	return tn.a + tn.b + param
+}
+```
+
+从中可以看出方法的定义方法。
+
+```go
+package main
+import (
+	"fmt"
+	"time"
+)
+type myTime struct {
+	time.Time //anonymous field
+}
+func (t myTime) first3Chars() string {
+	return t.Time.String()[0:3]
+}
+func main() {
+	m := myTime{time.Now()}
+	// 调用匿名Time上的String方法
+	fmt.Println("Full time now:", m.String())
+	// 调用myTime.first3Chars
+	fmt.Println("First 3 chars:", m.first3Chars())
+}
+```
+
+#### 8.5.2 指针或值作为被接收者
+
+```go
+package main
+import (
+	"fmt"
+)
+type B struct {
+	thing int
+}
+func (b *B) change() { b.thing = 1 }
+func (b B) write() string { return fmt.Sprint(b) }
+func main() {
+	var b1 B // b1是值
+	b1.change()
+	fmt.Println(b1.write())
+
+	b2 := new(B) // b2是指针
+	b2.change()
+	fmt.Println(b2.write())
+}
+```
+
+#### 8.5.3 方法和未导出字段
+
+考虑 `person2.go` 中的 `person` 包：类型 `Person` 被明确的导出了，但是它的字段没有被导出。例如在 `use_person2.go`中 `p.firstName` 就是错误的。该如何在另一个程序中修改或者只是读取一个 `Person` 的名字呢？
+
+这可以通过面向对象语言一个众所周知的技术来完成：提供 getter 和 setter 方法。对于 setter 方法使用 Set 前缀，对于 getter 方法只使用成员名。
+
+```go
+//person.go
+person
+
+type Person struct {
+	firstName string
+	lastName  string
+}
+
+func (p *Person) FirstName() string {
+	return p.firstName
+}
+
+func (p *Person) SetFirstName(newName string) {
+	p.firstName = newName
+}
+```
+
+```go
+//main.go
+package main
+
+import (
+	"./person"
+	"fmt"
+)
+
+func main() {
+	p := new(person.Person)
+	// p.firstName undefined
+	// (cannot refer to unexported field or method firstName)
+	// p.firstName = "Eric"
+	p.SetFirstName("Eric")
+	fmt.Println(p.FirstName()) // Output: Eric
+}
+```
+
+#### 8.5.4 内嵌类型的方法和继承
+
+当一个匿名类型被内嵌在结构体中时，匿名类型的可见方法也同样被内嵌，这在效果上等同于外层类型 **继承** 了这些方法：**将父类型放在子类型中来实现亚型**。这个机制提供了一种简单的方式来模拟经典面向对象语言中的子类和继承相关的效果
+
+可以看以下例子：
+
+```go
+package main
+
+import (
+	"fmt"
+	"math"
+)
+
+type Point struct {
+	x, y float64
+}
+
+func (p *Point) Abs() float64 {
+	return math.Sqrt(p.x*p.x + p.y*p.y)
+}
+
+type NamedPoint struct {
+	Point
+	name string
+}
+
+func main() {
+	n := &NamedPoint{Point{3, 4}, "Pythagoras"}
+	fmt.Println(n.Abs()) // 打印5
+}
+```
+
+从中可以看出通过内嵌一个匿名类型来实现了继承。
+
+#### 8.5.5 在类型中嵌入功能
+
+```go
+package main
+import (
+	"fmt"
+)
+type Log struct {
+	msg string
+}
+type Customer struct {
+	Name string
+	log  *Log
+}
+func main() {
+	c := new(Customer)
+	c.Name = "Barak Obama"
+	c.log = new(Log)
+	c.log.msg = "1 - Yes we can!"
+	// shorter
+	c = &Customer{"Barak Obama", &Log{"1 - Yes we can!"}}
+	// fmt.Println(c) &{Barak Obama 1 - Yes we can!}
+	c.Log().Add("2 - After me the world will be a better place!")
+	//fmt.Println(c.log)
+	fmt.Println(c.Log())
+}
+func (l *Log) Add(s string) {
+	l.msg += "\n" + s
+}
+func (l *Log) String() string {
+	return l.msg
+}
+func (c *Customer) Log() *Log {
+	return c.log
+}
+```
+
+实现2：
+
+```go
+package main
+
+import (
+	"fmt"
+)
+type Log struct {
+	msg string
+}
+type Customer struct {
+	Name string
+	Log
+}
+
+func main() {
+	c := &Customer{"Barak Obama", Log{"1 - Yes we can!"}}
+	c.Add("2 - After me the world will be a better place!")
+	fmt.Println(c)
+
+}
+func (l *Log) Add(s string) {
+	l.msg += "\n" + s
+}
+func (l *Log) String() string { //定制可以打印的方法
+	return l.msg
+}
+func (c *Customer) String() string {
+	return c.Name + "\nLog:" + fmt.Sprintln(c.Log)
+}
+```
+
+#### 8.5.6 多重继承
+
+多重继承指的是类型获得多个父类型行为的能力，它在传统的面向对象语言中通常是不被实现的（C++ 和 Python 例外）。因为在类继承层次中，多重继承会给编译器引入额外的复杂度。但是在 Go 语言中，通过在类型中嵌入所有必要的父类型，可以很简单的实现多重继承。
+
+作为一个例子，假设有一个类型 `CameraPhone`，通过它可以 `Call()`，也可以 `TakeAPicture()`，但是第一个方法属于类型 `Phone`，第二个方法属于类型 `Camera`。
+
+只要嵌入这两个类型就可以解决这个问题，如下所示：
+
+```go
+package main
+
+import (
+	"fmt"
+)
+
+type Camera struct{}
+
+func (c *Camera) TakeAPicture() string {
+	return "Click"
+}
+
+type Phone struct{}
+
+func (p *Phone) Call() string {
+	return "Ring Ring"
+}
+
+type CameraPhone struct {
+	Camera
+	Phone
+}
+
+func main() {
+	cp := new(CameraPhone)
+	fmt.Println("Our new CameraPhone exhibits multiple behaviors...")
+	fmt.Println("It exhibits behavior of a Camera: ", cp.TakeAPicture())
+	fmt.Println("It works like a Phone too: ", cp.Call())
+}
+```
+
+### 8.6 类型的 String() 方法和格式化描述符
+
+当定义了一个有很多方法的类型时，十之八九你会使用 `String()` 方法来定制类型的字符串形式的输出，换句话说：一种可阅读性和打印性的输出。如果类型定义了 `String()` 方法，它会被用在 `fmt.Printf()` 中生成默认的输出：等同于使用格式化描述符 `%v` 产生的输出。还有 `fmt.Print()` 和 `fmt.Println()` 也会自动使用 `String()` 方法
+
+```go
+package main
+
+import (
+	"fmt"
+	"strconv"
+)
+
+type TwoInts struct {
+	a int
+	b int
+}
+
+func main() {
+	two1 := new(TwoInts)
+	two1.a = 12
+	two1.b = 10
+	fmt.Printf("two1 is: %v\n", two1)
+	fmt.Println("two1 is:", two1)
+	fmt.Printf("two1 is: %T\n", two1)
+	fmt.Printf("two1 is: %#v\n", two1)
+}
+
+func (tn *TwoInts) String() string {
+	return "(" + strconv.Itoa(tn.a) + "/" + strconv.Itoa(tn.b) + ")"
+}
+```
+
+## 9 接口（Interfaces）与反射（reflection）
+
+### 9.1 概念
+
+Go 语言不是一种 *“传统”* 的面向对象编程语言：它里面没有类和继承的概念。
+
+但是 Go 语言里有非常灵活的 **接口** 概念，通过它可以实现很多面向对象的特性。接口提供了一种方式来 **说明** 对象的行为：如果谁能搞定这件事，它就可以用在这儿。
+
+接口定义了一组方法（方法集），但是这些方法不包含（实现）代码：它们没有被实现（它们是抽象的）。接口里也不能包含变量。
+
+通过如下格式定义接口：
+
+```go
+type Namer interface {
+    Method1(param_list) return_type
+    Method2(param_list) return_type
+    ...
+}
+```
+
+上面的 `Namer` 是一个 **接口类型**。
+
+（按照约定，只包含一个方法的）接口的名字由方法名加 `[e]r` 后缀组成，例如 `Printer`、`Reader`、`Writer`、`Logger`、`Converter` 等等。还有一些不常用的方式（当后缀 `er` 不合适时），比如 `Recoverable`，此时接口名以 `able`结尾，或者以 `I` 开头（像 `.NET` 或 `Java` 中那样）。
+
+Go 语言中的接口都很简短，通常它们会包含 0 个、最多 3 个方法。
+
+使用例子：
+
+下面的定义了一个球面积的接口，然后定义了两个不同的结构，然后创建了一个包含这两个结构的切片，然后遍历的时候，各自调用各自的方法：
+
+```go
+package main
+
+import "fmt"
+
+type Shaper interface {
+	Area() float32
+}
+
+type Square struct {
+	side float32
+}
+
+func (sq *Square) Area() float32 {
+	return sq.side * sq.side
+}
+
+type Rectangle struct {
+	length, width float32
+}
+
+func (r Rectangle) Area() float32 {
+	return r.length * r.width
+}
+
+func main() {
+	r := Rectangle{5, 3} // Area() of Rectangle needs a value
+	q := &Square{5}      // Area() of Square needs a pointer
+	// shapes := []Shaper{Shaper(r), Shaper(q)}
+	// or shorter
+	shapes := []Shaper{r, q}
+	
+	fmt.Println("Looping through shapes for area ...")
+	for n, _ := range shapes {
+		fmt.Println("Shape details: ", shapes[n])
+		fmt.Println("Area of this shape is: ", shapes[n].Area())
+	}
+}
+
+```
+
+结果：
+
+```go
+Looping through shapes for area ...
+Shape details:  {5 3}
+Area of this shape is:  15
+Shape details:  &{5}
+Area of this shape is:  25
+```
+
+### 9.2 接口嵌套接口
+
+一个接口可以嵌套其他接口。
+
+```go
+type ReadWrite interface {
+    Read(b Buffer) bool
+    Write(b Buffer) bool
+}
+
+type Lock interface {
+    Lock()
+    Unlock()
+}
+
+type File interface {
+    ReadWrite
+    Lock
+    Close()
+}
+```
+
+只需要使用内嵌的方式就好了。
+
+### 9.3 类型断言：检测和转换接口变量的类型
+
+一个接口类型的变量 `varI` 中可以包含任何类型的值，必须有一种方式来检测它的 **动态** 类型，即运行时在变量中存储的值的实际类型。在执行过程中动态类型可能会有所不同，但是它总是可以分配给接口变量本身的类型。通常我们可以使用 **类型断言** 来测试在某个时刻 `varI` 是否包含类型 `T` 的值：
+
+```go
+v := varI.(T)       // unchecked type assertion
+```
+
+**varI 必须是一个接口变量**，否则编译器会报错：`invalid type assertion: varI.(T) (non-interface type (type of varI) on left)` 。
+
+类型断言可能是无效的，虽然编译器会尽力检查转换是否有效，但是它不可能预见所有的可能性。如果转换在程序运行时失败会导致错误发生。更安全的方式是使用以下形式来进行类型断言：
+
+```go
+if v, ok := varI.(T); ok {  // checked type assertion
+    Process(v)
+    return
+}
+// varI is not of type T
+```
+
+如果转换合法，`v` 是 `varI` 转换到类型 `T` 的值，`ok` 会是 `true`；否则 `v` 是类型 `T` 的零值，`ok` 是 `false`，也没有运行时错误发生。
+
+**应该总是使用上面的方式来进行类型断言**。
+
+多数情况下，我们可能只是想在 `if` 中测试一下 `ok` 的值，此时使用以下的方法会是最方便的：
+
+```go
+if _, ok := varI.(T); ok {
+    // ...
+}
+```
+
+### 9.4 类型判断
+
+接口变量的类型也可以使用一种特殊形式的 `switch` 来检测：**type-switch**：
+
+```go
+switch t := areaIntf.(type) {
+case *Square:
+	fmt.Printf("Type Square %T with value %v\n", t, t)
+case *Circle:
+	fmt.Printf("Type Circle %T with value %v\n", t, t)
+case nil:
+	fmt.Printf("nil value: nothing to check?\n")
+default:
+	fmt.Printf("Unexpected type %T\n", t)
+}
+```
+
+### 9.5 实现一个排序接口
+
+自己实现一个 `Sort` 包用来排序。
+
+首先目录是这样的：
+
+```go
+.
+├── main.go
+└── sort
+    └── sort.go
+
+1 directory, 2 files
+```
+
+接下来是各个文件的代码：
+
+```go
+// sort.go
+package sort
+
+type Sorter interface {
+	Len() int
+	Less(i, j int) bool
+	Swap(i, j int)
+}
+
+func Sort(data Sorter) {
+	for i := data.Len() - 1; i >= 0; i-- {
+		for j := 0; j < i; j++ {
+			if data.Less(j, j+1) {
+				data.Swap(j, j+1)
+			}
+		}
+	}
+}
+
+func IsSorted(data Sorter) bool {
+	n := data.Len()
+	for i := n - 1; i > 0; i-- {
+		if data.Less(i, i-1) {
+			return true
+		}
+	}
+	return false
+}
+
+// Convenience types for common cases
+type IntArray []int
+
+func (p IntArray) Len() int           { return len(p) }
+func (p IntArray) Less(i, j int) bool { return p[i] > p[j] }
+func (p IntArray) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+type StringArray []string
+
+func (p StringArray) Len() int           { return len(p) }
+func (p StringArray) Less(i, j int) bool { return p[i] > p[j] }
+func (p StringArray) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+// Convenience wrappers for common cases
+func SortInts(a []int)       { Sort(IntArray(a)) }
+func SortStrings(a []string) { Sort(StringArray(a)) }
+
+func IntsAreSorted(a []int) bool       { return IsSorted(IntArray(a)) }
+func StringsAreSorted(a []string) bool { return IsSorted(StringArray(a)) }
+
+```
+
+```go
+// main.go
+package main
+
+import (
+	"fmt"
+	"./sort"
+)
+
+func ints() {
+	data := []int{74, 59, 238, -784, 9845, 959, 905, 0, 0, 42, 7586, -5467984, 7586}
+	a := sort.IntArray(data) //conversion to type IntArray
+	sort.Sort(a)
+	if !sort.IsSorted(a) {
+		panic("fails")
+	}
+	fmt.Printf("The sorted array is: %v\n", a)
+}
+
+func strings() {
+	data := []string{"monday", "friday", "tuesday", "wednesday", "sunday", "thursday", "", "saturday"}
+	a := sort.StringArray(data)
+	sort.Sort(a)
+	if !sort.IsSorted(a) {
+		panic("fail")
+	}
+	fmt.Printf("The sorted array is: %v\n", a)
+}
+
+type day struct {
+	num       int
+	shortName string
+	longName  string
+}
+
+type dayArray struct {
+	data []*day
+}
+
+func (p *dayArray) Len() int           { return len(p.data) }
+func (p *dayArray) Less(i, j int) bool { return p.data[i].num < p.data[j].num }
+func (p *dayArray) Swap(i, j int)      { p.data[i], p.data[j] = p.data[j], p.data[i] }
+
+func days() {
+	Sunday := day{0, "SUN", "Sunday"}
+	Monday := day{1, "MON", "Monday"}
+	Tuesday := day{2, "TUE", "Tuesday"}
+	Wednesday := day{3, "WED", "Wednesday"}
+	Thursday := day{4, "THU", "Thursday"}
+	Friday := day{5, "FRI", "Friday"}
+	Saturday := day{6, "SAT", "Saturday"}
+	data := []*day{&Tuesday, &Thursday, &Wednesday, &Sunday, &Monday, &Friday, &Saturday}
+	a := dayArray{data}
+	sort.Sort(&a)
+	if !sort.IsSorted(&a) {
+		panic("fail")
+	}
+	for _, d := range data {
+		fmt.Printf("%s ", d.longName)
+	}
+	fmt.Printf("\n")
+}
+func main() {
+	ints()
+	strings()
+	days()
+}
+```
+
+编译运行：
+
+```
+The sorted array is: [-5467984 -784 0 0 42 59 74 238 905 959 7586 7586 9845]
+The sorted array is: [ friday monday saturday sunday thursday tuesday wednesday]
+Saturday Friday Thursday Wednesday Tuesday Monday Sunday
+```
+
+### 9.6 空接口
+
+#### 9.6.1 概念
+
+**空接口或者最小接口** 不包含任何方法，它对实现不做任何要求：
+
+```go
+type Any interface {}
+```
+
+空接口类似 `Java/C#` 中所有类的基类： `Object` 类，二者的目标也很相近。
+
+可以给一个空接口类型的变量 `var val interface {}` 赋任何类型的值。
+
+```go
+package main
+
+import "fmt"
+
+var i = 5
+var str = "ABC"
+
+type Person struct {
+	name string
+	age  int
+}
+
+type Any interface{}
+
+func main() {
+	var val Any
+	val = 5
+	fmt.Printf("val has the value: %v\n", val)
+	val = str
+	fmt.Printf("val has the value: %v\n", val)
+	pers1 := new(Person)
+	pers1.name = "Rob Pike"
+	pers1.age = 55
+	val = pers1
+	fmt.Printf("val has the value: %v\n", val)
+	switch t := val.(type) {
+	case int:
+		fmt.Printf("Type int %T\n", t)
+	case string:
+		fmt.Printf("Type string %T\n", t)
+	case bool:
+		fmt.Printf("Type boolean %T\n", t)
+	case *Person:
+		fmt.Printf("Type pointer to Person %T\n", t)
+	default:
+		fmt.Printf("Unexpected type %T", t)
+	}
+}
+
+```
+
+在上面的例子中，接口变量 `val` 被依次赋予一个 `int`，`string` 和 `Person` 实例的值，然后使用 `type-switch` 来测试它的实际类型。每个 `interface {}` 变量在内存中占据两个字长：一个用来存储它包含的类型，另一个用来存储它包含的数据或者指向数据的指针。
+
+#### 9.6.2 lambda
+
+下面例子是空接口在 lambda 表达式中的用法：
+
+```go
+package main
+
+import "fmt"
+
+type specialString string
+
+var whatIsThis specialString = "hello"
+
+func TypeSwitch() {
+	testFunc := func(any interface{}) {
+		switch v := any.(type) {
+		case bool:
+			fmt.Printf("any %v is a bool type", v)
+		case int:
+			fmt.Printf("any %v is an int type", v)
+		case float32:
+			fmt.Printf("any %v is a float32 type", v)
+		case string:
+			fmt.Printf("any %v is a string type", v)
+		case specialString:
+			fmt.Printf("any %v is a special String!", v)
+		default:
+			fmt.Println("unknown type!")
+		}
+	}
+	testFunc(whatIsThis)
+}
+
+func main() {
+	TypeSwitch()
+}
+```
+
+#### 9.6.3 构建通用型数组
+
+我们看到了能被搜索和排序的 `int` 数组、`float` 数组以及 `string` 数组，那么对于其他类型的数组呢，是不是我们必须得自己编程实现它们？
+
+现在我们知道该怎么做了，就是通过使用空接口。让我们给空接口定一个别名类型 `Element`：`type Element interface{}`
+
+然后定义一个容器类型的结构体 `Vector`，它包含一个 `Element` 类型元素的切片：
+
+```go
+type Vector struct {
+	a []Element
+}
+```
+
+`Vector` 里能放任何类型的变量，因为任何类型都实现了空接口，实际上 `Vector` 里放的每个元素可以是不同类型的变量。我们为它定义一个 `At()` 方法用于返回第 `i` 个元素：
+
+```go
+func (p *Vector) At(i int) Element {
+	return p.a[i]
+}
+```
+
+再定一个 `Set()` 方法用于设置第 `i` 个元素的值：
+
+```go
+func (p *Vector) Set(i int, e Element) {
+	p.a[i] = e
+}
+```
+
+`Vector` 中存储的所有元素都是 `Element` 类型，要得到它们的原始类型（unboxing：拆箱）需要用到类型断言。TODO：The compiler rejects assertions guaranteed to fail，类型断言总是在运行时才执行，因此它会产生运行时错误。
+
+#### 9.6.4 复制数据切片至空接口切片
+
+假设你有一个 `myType` 类型的数据切片，你想将切片中的数据复制到一个空接口切片中，类似：
+
+```go
+var dataSlice []myType = FuncReturnSlice()
+var interfaceSlice []interface{} = dataSlice
+```
+
+可惜不能这么做，编译时会出错：`cannot use dataSlice (type []myType) as type []interface { } in assignment`。
+
+原因是它们俩在内存中的布局是不一样的（参考 [官方说明](http://golang.org/doc/go_spec.html)）。
+
+必须使用 `for-range` 语句来一个一个显式地复制：
+
+```go
+var dataSlice []myType = FuncReturnSlice()
+var interfaceSlice []interface{} = make([]interface{}, len(dataSlice))
+for i, d := range dataSlice {
+    interfaceSlice[i] = d
+}
+```
+
+#### 9.6.5 通用型节点的数据结构
+
