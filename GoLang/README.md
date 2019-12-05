@@ -3,10 +3,10 @@
 ## 目录
 
 - [基础知识学习笔记](基础知识学习笔记。md)
-- [golang 操作 redis](使用 golang 操作 redis.md)
-- [gin 框架](gin 框架。md)
-- [GoLang 自定义包总结](GoLang 自定义包总结。md)
-- [http 包使用](http 包使用。md)
+- [golang 操作 redis](使用golang操作redis.md)
+- [gin 框架](gin框架.md)
+- [GoLang 自定义包总结](GoLang自定义包总结.md)
+- [http 包使用](http包使用.md)
 - 
 
 ## 学习资源收集
