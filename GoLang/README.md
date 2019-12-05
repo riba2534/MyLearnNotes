@@ -2,15 +2,12 @@
 
 ## 目录
 
-- [基础知识学习笔记](基础知识学习笔记.md)
-- [golang 操作 redis](使用golang操作redis.md)
-- [gin框架](gin框架.md)
-- [GoLang自定义包总结](GoLang自定义包总结.md)
-- [http包使用](http包使用.md)
+- [基础知识学习笔记](基础知识学习笔记。md)
+- [golang 操作 redis](使用 golang 操作 redis.md)
+- [gin 框架](gin 框架。md)
+- [GoLang 自定义包总结](GoLang 自定义包总结。md)
+- [http 包使用](http 包使用。md)
 - 
-
-
-
 
 ## 学习资源收集
 
@@ -32,5 +29,10 @@
 ### 性能相关
 
 1. [Golang slice 和 map 的查询性能比较](https://golangnote.com/topic/224.html)
-2. [golang语言编译的二进制可执行文件为什么比 C 语言大](https://www.cnxct.com/why-golang-elf-binary-file-is-large-than-c/)
+2. [golang 语言编译的二进制可执行文件为什么比 C 语言大](https://www.cnxct.com/why-golang-elf-binary-file-is-large-than-c/)
+
+### 内存优化
+
+1. [高性能 Go 服务的内存优化](https://juejin.im/entry/5ca30b8d51882543b62c1d47)
+2. [Golang 之变量去哪儿？](https://juejin.im/post/5c7920f3e51d457120759b77)
 3. 
