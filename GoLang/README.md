@@ -31,8 +31,16 @@
 1. [Golang slice 和 map 的查询性能比较](https://golangnote.com/topic/224.html)
 2. [golang 语言编译的二进制可执行文件为什么比 C 语言大](https://www.cnxct.com/why-golang-elf-binary-file-is-large-than-c/)
 
-### 内存优化
+### 内存相关
 
 1. [高性能 Go 服务的内存优化](https://juejin.im/entry/5ca30b8d51882543b62c1d47)
 2. [Golang 之变量去哪儿？](https://juejin.im/post/5c7920f3e51d457120759b77)
-3. 
+3. [如何确定一个 Go 变量会被分配在哪里？](http://russellluo.com/2019/07/how-to-confirm-where-a-go-variable-will-be-allocated.html)
+4. GOlang GC 算法
+   1. [golang 三色标记算法](http://idiotsky.top/2017/08/16/gc-three-color/)
+   2. [Go 语言实时 GC - 三色标记算法](https://juejin.im/post/5c62d45ee51d457fa44f4404)
+   3. [Go的三色标记GC](https://segmentfault.com/a/1190000012597428)  主要提到了写屏障
+   4. [图解Golang的GC算法](https://i6448038.github.io/2019/03/04/golang-garbage-collector/) 图画的比较好
+   5. [基本垃圾回收算法](https://github.com/tiancaiamao/go.blog/blob/master/content/gc.md) 总结的比较好
+   6. [深入浅出垃圾回收（三）增量式 GC](https://liujiacai.net/blog/2018/08/04/incremental-gc/)
+5. 
