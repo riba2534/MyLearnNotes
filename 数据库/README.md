@@ -12,3 +12,8 @@
 2. [使用缓存的正确姿势](https://juejin.im/post/5af5b2c36fb9a07ac65318bd)
 3. 
 
+
+## 博主
+
+1. [zsythink](http://www.zsythink.net/) 里面有较详细的 MySQL 讲解
+2. 

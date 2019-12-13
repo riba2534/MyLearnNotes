@@ -11,6 +11,10 @@
 
 ## 学习资源收集
 
+### 基本包的使用
+
+1. [golang regexp 正则表达式常见的用法](https://golangnote.com/topic/5.html)
+
 ### 并发相关
 
 1. [Golang 并发控制的两种模式](https://golangnote.com/topic/184.html)
