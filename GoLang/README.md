@@ -11,9 +11,11 @@
 
 ## 学习资源收集
 
-### 基本包的使用
+### 基本包的使用&语言相关
 
 1. [golang regexp 正则表达式常见的用法](https://golangnote.com/topic/5.html)
+2. [Go语言参数传递是传值还是传引用](https://www.flysnow.org/2018/02/24/golang-function-parameters-passed-by-value.html)
+3. 
 
 ### 并发相关
 
