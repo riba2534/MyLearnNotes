@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <title>component-1</title>
+</head>
+
+<body>
+    <div id="app">
+        <hpc></hpc>
+        <panda></panda>
+    </div>
+
+    <div id="ppa">
+        <hpc></hpc>
+    </div>
+    <script type="text/javascript">
+        Vue.component('hpc', {
+            template: `<div style="color: red;">全局hpc组件</div>`
+        })
+        var app = new Vue({
+            el: "#app",
+            components: {
+                "panda": {
+                    template: `<div style="color: green;">局部panda组件</div>`
+                }
+            }
+        })
+        var ppa = new Vue({
+            el: "#ppa"
+        })
+    </script>
+</body>
+
+</html>

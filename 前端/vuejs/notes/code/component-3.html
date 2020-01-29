@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <title>component-1</title>
+</head>
+
+<body>
+    <div id="app">
+        <panda></panda>
+    </div>
+
+    <script type="text/javascript">
+        var cityComponent = {
+            template: `<div style="color: red;">四川</div>`
+        }
+        var pandaComponent = {
+            template: `
+            <div>
+                <p>Panda from China.</p>
+                <city></city>
+            </div>
+            `,
+            components: {
+                "city": cityComponent,
+            }
+        }
+        var app = new Vue({
+            el: "#app",
+            components: {
+                "panda": pandaComponent
+            }
+        })
+
+    </script>
+</body>
+
+</html>

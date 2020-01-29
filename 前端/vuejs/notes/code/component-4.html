@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <title>component-1</title>
+</head>
+
+<body>
+    <div id="app">
+        <component :is="who"></component>
+        <button @click="changeComponent">changeComponent</button>
+    </div>
+
+    <script type="text/javascript">
+        var ComponentA = {
+            template: `<div style="color: red;">I'm ComponentA</div>`
+        }
+        var ComponentB = {
+            template: `<div style="color: blue;">I'm ComponentB</div>`
+        }
+        var ComponentC = {
+            template: `<div style="color: pink;">I'm ComponentC</div>`
+        }
+        var app = new Vue({
+            el: "#app",
+            data: {
+                who: "ComponentA"
+            },
+            components: {
+                "ComponentA": ComponentA,
+                "ComponentB": ComponentB,
+                "ComponentC": ComponentC
+            },
+            methods: {
+                changeComponent: function () {
+                    if (this.who == "ComponentA") {
+                        this.who = "ComponentB";
+                    } else if (this.who == "ComponentB") {
+                        this.who = "ComponentC";
+                    } else {
+                        this.who = "ComponentA";
+                    }
+                }
+            }
+        })
+
+    </script>
+</body>
+
+</html>

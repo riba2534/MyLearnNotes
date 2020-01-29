@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <title>component-1</title>
+</head>
+
+<body>
+    <div id="app">
+        <panda v-bind:here="message"></panda>
+        <panda :here="message"></panda>
+    </div>
+    <script type="text/javascript">
+        var app = new Vue({
+            el: "#app",
+            data: {
+                message: "Chinad"
+            },
+            components: {
+                "panda": {
+                    template: `<div style="color: green;">Panda from {{here}}</div>`,
+                    props: [
+                        'here'
+                    ]
+                }
+            }
+        })
+
+    </script>
+</body>
+
+</html>

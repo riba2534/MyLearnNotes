@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <title>vue.extended 扩展实例构造器</title>
+</head>
+
+<body>
+    <div id="app">
+        <author></author>
+        <div id="author"></div>
+    </div>
+
+    <script type="text/javascript">
+        var authorUrl = Vue.extend({
+            template: "<p><a :href='authorUrl' target='_blank'>{{authorName}}</a></p>",
+            data: function () {
+                return {
+                    authorName: "hpc",
+                    authorUrl: "https://blog.riba2534.cn"
+                }
+            }
+        })
+
+        new authorUrl().$mount("author");// 方法1
+        new authorUrl().$mount("#author"); // 直接使用div绑定
+
+    </script>
+</body>
+
+</html>
