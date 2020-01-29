@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>v-if指令</title>
+</head>
+
+<body>
+    <div id="app">
+        <input type="button" value="切换显示" @click="toggleIsShow">
+        <!-- v-if 是直接从DOM树中删除，而v-show只是使其隐藏 -->
+        <p v-if="isShow">贺鹏程真帅</p>
+        <p v-show="isShow">贺鹏程真帅 v-show修饰</p>
+        <h2 v-if="t>=35">热死了</h2>
+    </div>
+    <!-- 开发环境版本，包含了有帮助的命令行警告 -->
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script>
+        var app = new Vue({
+            el: "#app",
+            data: {
+                isShow: false,
+                t: 40
+            },
+            methods: {
+                toggleIsShow: function () {
+                    this.isShow = !this.isShow
+                }
+            }
+        })
+    </script>
+</body>
+
+</html>

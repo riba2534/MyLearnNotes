@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>el挂载点</title>
+</head>
+
+
+<!-- 不允许挂在在body和html标签下 -->
+
+<body id="body">
+    <!-- 只有在内部才可以渲染，在外部是不行的 -->
+    <div id="app" class="app">
+        {{ message }}
+        <span> {{ message }} </span>
+    </div>
+
+    <!-- 开发环境版本，包含了有帮助的命令行警告 -->
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script>
+        // 推荐使用id选择器
+        var app = new Vue({
+            // el: "#app",
+            // el: ".app",
+            el: "div",
+            data: {
+                message: "hpc!"
+            }
+        })
+    </script>
+
+</body>
+
+</html>

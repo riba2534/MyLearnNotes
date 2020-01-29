@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>小黑记事本</title>
+</head>
+
+<body>
+    <div id="todoapp">
+        <h1>小黑记事本</h1>
+        <br>
+        <!-- <input type="button" value="修改message" @click="setM"> -->
+        <!-- <input type="text" v-model="message" @keyup.enter="getM"> -->
+        <!-- <h2>{{ message }}</h2> -->
+        <input type="text" v-model="message" @keyup.enter="insert">
+        <ul>
+            <li v-for="item in content">
+                {{item}}
+            </li>
+        </ul>
+        <input type="button" value="清除列表" @click="clean">
+    </div>
+    <!-- 开发环境版本，包含了有帮助的命令行警告 -->
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script>
+        var app = new Vue({
+            el: "#todoapp",
+            data: {
+                content: [],
+                message: "",
+            },
+            methods: {
+                insert: function () {
+                    this.content.push(this.message)
+                    // alert(this.message)
+                },
+                clean: function () {
+                    this.content = []
+                }
+            }
+
+        })
+    </script>
+</body>
+
+</html>
