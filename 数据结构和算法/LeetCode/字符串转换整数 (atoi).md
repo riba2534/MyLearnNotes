@@ -99,3 +99,128 @@ class Solution
 };
 ```
 
+20200403重写：
+
+垃圾代码：
+
+```cpp
+class Solution
+{
+public:
+    void ltrim(std::string &s)
+    {
+        s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int ch) { return !std::isspace(ch); }));
+    }
+    int myAtoi(string str)
+    {
+        int flag = 1;
+        long long num = 0;
+        ltrim(str);
+        if (str.length() == 0)
+            return 0;
+
+        if (str[0] == '-' || str[0] == '+')
+            flag = str[0] == '-' ? -1 : 1;
+        else if (!isdigit(str[0]))
+            return 0;
+        else
+            num = str[0] - '0';
+        for (int i = 1; i < str.length(); i++)
+        {
+            char ch = str[i];
+            if (isdigit(ch))
+            {
+                num = num * 10 + (ch - '0');
+                if (num > INT_MAX)
+                {
+                    break;
+                }
+            }
+            else
+                break;
+        }
+        if (flag == 1)
+        {
+            if (num > INT_MAX)
+            {
+                return INT_MAX;
+            }
+        }
+        else
+        {
+            if (-num < INT_MIN)
+            {
+                return INT_MIN;
+            }
+        }
+        return flag * num;
+    }
+};
+```
+
+---
+
+自动机解法：[方法一：自动机](https://leetcode-cn.com/problems/string-to-integer-atoi/solution/zi-fu-chuan-zhuan-huan-zheng-shu-atoi-by-leetcode-/)
+
+![](https://assets.leetcode-cn.com/solution-static/8_fig1.PNG)
+
+用表格表示这个自动机：
+
+|               | `' '` | `+/-`  | `number`  | `other` |
+| :-----------: | :---: | :----: | :-------: | ------- |
+|   **start**   | start | signed | in_number | end     |
+|  **signed**   |  end  |  end   | in_number | end     |
+| **in_number** |  end  |  end   | in_number | end     |
+|    **end**    |  end  |  end   |    end    | end     |
+
+最后代码就很简洁了：
+
+```cpp
+class Automaton
+{
+    string state = "start";
+    unordered_map<string, vector<string>> table = {
+        {"start", {"start", "signed", "in_number", "end"}},
+        {"signed", {"end", "end", "in_number", "end"}},
+        {"in_number", {"end", "end", "in_number", "end"}},
+        {"end", {"end", "end", "end", "end"}}};
+    int get_col(char c)
+    {
+        if (isspace(c))
+            return 0;
+        if (c == '+' || c == '-')
+            return 1;
+        if (isdigit(c))
+            return 2;
+        return 3;
+    }
+
+public:
+    int sign = 1;
+    long long ans = 0;
+    void get(char c)
+    {
+        state = table[state][get_col(c)];
+        if (state == "in_number")
+        {
+            ans = ans * 10 + c - '0';
+            ans = sign == 1 ? min(ans, (long long)INT_MAX) : min(ans, -(long long)INT_MIN);
+        }
+        else if (state == "signed")
+            sign = c == '+' ? 1 : -1;
+    }
+};
+
+class Solution
+{
+public:
+    int myAtoi(string str)
+    {
+        Automaton automaton;
+        for (char c : str)
+            automaton.get(c);
+        return automaton.sign * automaton.ans;
+    }
+};
+```
+
