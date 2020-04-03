@@ -10,5 +10,5 @@
 2. [全局API](notes/全局API.md)
 3. [选项](notes/选项.md)
 4. [实例和内置组件](notes/实例和内置组件.md)
-5. [vue-cli](notes/vue-cli.md)
+5. [vue-cli及相关模块使用](notes/vue-cli.md)
 
