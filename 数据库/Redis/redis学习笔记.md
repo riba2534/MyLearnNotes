@@ -196,5 +196,104 @@ brpop k1 k2 k3 ... timeout
 
 ### `set`
 
+#### 基本操作
 
+Redis的Set是string类型的无序集合。集合成员是唯一的，这就意味着集合中不能出现重复的数据。
+
+Redis 中 集合是通过哈希表实现的，所以添加，删除，查找的复杂度都是O(1)。
+
+集合中最大的成员数为 232 - 1 (4294967295, 每个集合可存储40多亿个成员)。
+
+```
+# 添加数据
+sadd key member1 [member2]
+# 获取数据
+smembers key
+# 删除数据
+srem key member1 [member2]
+# 获取集合数据总量
+scard key
+# 判断集合中是否包含指定数据
+sismember key member
+```
+
+#### 扩展操作
+
+```
+# 随机获取集合中指定数量的数据
+srandmember key [count]
+
+# 随机获取集合中的某个数据并将改数据移出集合
+spop key
+
+# 求两个集合的交、并、差集
+sinter key1 [key2]
+sunion key1 [key2]
+sdiff key1 [key2]
+
+# 求两个集合的交、并、差集并存储到指定集合中
+sinterstore destination key [key ...]
+sunionstore destination key [key ...]
+sdiffstore destination key [key ...]
+
+# 将指定数据从原始集合中移动到目标集合中
+smove source destination member
+```
+
+#### 注意事项
+
+- set 类型中数据只存一份
+
+### `sorted_set`
+
+#### 基本操作
+
+```
+# 将一个或多个 member 元素及其 score 值加入到有序集 key 当中。
+zadd key score member [[score member] [score member] ...]
+
+# 获取全部数据
+zrange key st ed [withscores] # 升序
+zrevrange key start stop [WITHSCORES] # 降序
+
+# 删除数据
+zrem key member [member...]
+
+# 返回有序集 key 中，所有 score 值介于 min 和 max 之间(包括等于 min 或 max )的成员。有序集成员按 score 值递增(从小到大)次序排列。
+zrangebyscore key min max [withscore] [limit]
+# 返回有序集 key 中， score 值介于 max 和 min 之间(默认包括等于 max 或 min )的所有的成员。有序集成员按 score 值递减(从大到小)的次序排列。
+zrevrangebyscore key max min [withscore]   # 逆序排列所有成员
+
+# 条件删除数据
+zremrangebyrank key st ed
+zremrangebyscore key min max
+
+# 获取集合数据总量
+zcard key
+zcount key min max
+
+# 集合交并操作
+zinterstore destination numkeys key [key...]  # numkeys代表数量，就是几个集合
+zunoinstore destination numkeys key [key...]
+```
+
+#### 扩展操作
+
+```
+# 获取数据对应的索引（排名）
+zrank key number  # 正序
+zrevrank key number # 逆序索引
+
+# score 值获取与修改
+zscore key number # 获取number的分数
+zincrby key increment member # 为有序集 key 的成员 member 的 score 值加上增量 increment 。
+```
+
+#### 注意事项
+
+- socre保存的是64位
+- score保存的数据可以是一个 double 值，但是可能会丢失精度
+- `sorted_set` 底层还是基于 set 的，因此数据不能重复，如果重复添加相同数据，score会被覆盖
+
+使用 `time` 可以知道当前时间戳.
 
