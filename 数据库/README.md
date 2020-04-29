@@ -6,8 +6,19 @@
 
 ## 目录
 
-- [MySQL](MySQL)
-- [Redis](Redis)
+### MySQL
+
+- [MySQL语句学习笔记](MySQL/MySQL语句学习笔记.md)
+- [《MySQL实战45讲》笔记](MySQL/《MySQL实战45讲》笔记.md)
+- [mysql踩坑记录](MySQL/mysql踩坑记录.md)
+
+### Redis
+
+- [redis学习笔记](Redis/redis学习笔记.md)  先学会怎么使用
+- [《Redis设计与实现》笔记](Redis/《Redis设计与实现》笔记.md) 再了解内部原理
+- 
+
+
 
 
 
