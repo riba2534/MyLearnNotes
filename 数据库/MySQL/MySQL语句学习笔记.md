@@ -1465,3 +1465,311 @@ SELECT s2.* FROM student_info AS s1 INNER JOIN student_score AS s2 WHERE s1.numb
 
 ## 组合查询
 
+多条查询语句产生的结果集查也可以被合并成一个大的结果集，这种将多条查询语句产生的结果集合并起来的查询方式称为`合并查询`，或者`组合查询`。
+
+### 涉及单表的组合查询
+
+使用 `UNION` 可以将两个查询语句连接到一起。
+
+```sql
+SELECT m1 FROM t1 WHERE m1 < 2 UNION SELECT m1 FROM t1 WHERE m1 > 2;
+# 也可以连接多个
+SELECT m1 FROM t1 WHERE m1 < 2 UNION SELECT m1 FROM t1 WHERE m1 > 2 UNION SELECT m1 FROM t1 WHERE m1 = 2;
+```
+
+多个表达式也可以，只要数量相同比如下边这个使用`UNION`连接起来的各个查询语句的查询列表处都有2个表达式：
+
+```sql
+SELECT m1, n1 FROM t1 WHERE m1 < 2 UNION SELECT m1, n1 FROM t1 WHERE m1 > 2;
+```
+
+**使用UNION连接起来的各个查询语句的查询列表中位置相同的表达式的类型应该是相同的**。当然这不是硬性要求，如果不匹配的话，`MySQL`将会自动的进行类型转换，比方说下边这个组合查询语句：
+
+```sql
+SELECT m1, n1 FROM t1 WHERE m1 < 2 UNION SELECT n1, m1 FROM t1 WHERE m1 > 2;
+```
+
+使用`UNION`连接起来的两个查询中，第一个语句的查询列表是`m1, n1`，第二个查询语句的查询列表是`n1, m1`，我们应该注意两点：
+
+- 第一个查询的查询列表处的`m1`和第二个查询的查询列表的`n1`对应，第一个查询的查询列表处的`n1`和第二个查询的查询列表的`m1`对应，`m1`和`n1`虽然类型不同，但`MySQL`会帮助我们自动进行必要的类型转换。
+- 这几个查询语句的结果集都可以被合并到一个大的结果集中，但是这个大的结果集总是要有展示一下列名的吧，所以就规定组合查询的结果集中显示的列名将以第一个查询中的列名为准，上边的例子就采用了第一个查询中的`m1, n1`作为结果集的列名。
+
+### 涉及不同表的组合查询
+
+我们可以使用`UNION`直接将这两个查询语句拼接到一起：
+
+```sql
+SELECT m1, n1 FROM t1 WHERE m1 < 2 UNION SELECT m2, n2 FROM t2 WHERE m2 > 2;
+```
+
+### 包含或去除重复的行
+
+**默认情况下，使用`UNION`来合并多个查询的记录会默认过滤掉重复的记录。**
+
+如果我们想要保留重复记录，可以使用`UNION ALL`来连接多个查询：
+
+```sql
+SELECT m1, n1 FROM t1 UNION ALL SELECT m2, n2 FROM t2;
+```
+
+### 组合查询中的`ORDER BY`和`LIMIT`子句
+
+`组合查询`会把各个查询的结果汇总到一块，如果我们相对最终的结果集进行排序或者只保留几行的话，可以在组合查询的语句末尾加上`ORDER BY`和`LIMIT`子句，就像这样：
+
+```sql
+SELECT m1, n1 FROM t1 UNION SELECT m2, n2 FROM t2 ORDER BY m1 DESC LIMIT 2;
+```
+
+这里需要注意的一点是，**由于最后的结果集展示的列名是第一个查询中给定的列名，所以`ORDER BY`子句中指定的排序列也必须是第一个查询中给定的列名（别名也可以）。**
+
+如果我们只想单独为各个小的查询排序，而不为最终的汇总的结果集排序行不行呢？先试试：
+
+```sql
+mysql> (SELECT m1, n1 FROM t1 ORDER BY m1 DESC) UNION (SELECT m2, n2 FROM t2 ORDER BY m2 DESC);
++------+------+
+| m1   | n1   |
++------+------+
+|    1 | a    |
+|    2 | b    |
+|    3 | c    |
+|    4 | d    |
++------+------+
+4 rows in set (0.00 sec)
+
+mysql>
+```
+
+从结果来看，我们为各个小查询加入的`ORDER BY`子句好像并没有起作用，这是因为MySQL`规定组合查询并不保证最后汇总起来的大结果集中的顺序是按照各个小查询的结果集中的顺序排序的，也就是说我们在各个小查询中加入ORDER BY`子句的作用和没加一样～ 不过如果我们只是单纯的想从各个小的查询中获取有限条排序好的记录加入最终的汇总，那是可以滴，比如这样：
+
+```sql
+mysql> (SELECT m1, n1 FROM t1 ORDER BY m1 DESC LIMIT 1) UNION (SELECT m2, n2 FROM t2 ORDER BY m2 DESC LIMIT 1);
++------+------+
+| m1   | n1   |
++------+------+
+|    3 | c    |
+|    4 | d    |
++------+------+
+2 rows in set (0.00 sec)
+
+mysql>
+```
+
+如图所示，最终结果集中的`(3, 'c')`其实就是查询`(SELECT m1, n1 FROM t1 ORDER BY m1 DESC LIMIT 1)`的结果，`(4, 'd')`其实就是查询`(SELECT m2, n2 FROM t2 ORDER BY m2 DESC LIMIT 1)`的结果。
+
+## 数据的插入、删除和更新
+
+### 插入数据
+
+#### 插入完整的数据
+
+```sql
+INSERT INTO 表名 VALUES(列1的值，列2的值, ..., 列n的值);
+比如：
+INSERT INTO first_table VALUES(2, NULL);
+也可以自定义顺序：
+INSERT INTO first_table(first_column, second_column) VALUES (3, 'ccc');
+```
+
+#### 插入记录的一部分
+
+在插入记录的时候，某些列的值可以被省略，但是这个列必须满足下边列出的某个条件之一：
+
+- 该列允许存储NULL值
+- 该列有DEFAULT属性，给出了默认值
+
+我们定义的`first_table`表中的两个字段都允许存放`NULL`值，所以在插入数据的时候可以省略部分列的值。在`INSERT`语句中没有显式指定的列的值将被设置为`NULL`，比如这样写：
+
+```sql
+mysql> INSERT INTO first_table(first_column) VALUES(5);
+Query OK, 1 row affected (0.00 sec)
+
+mysql> INSERT INTO first_table(second_column) VALUES('fff');
+Query OK, 1 row affected (0.00 sec)
+
+mysql>
+```
+
+第一条插入语句我们只指定了`first_column`列的值是`5`，而没有指定`second_column`的值，所以`second_column`的值就是`NULL`；第二条插入语句我们只指定了`second_column`的值是`'ddd'`，而没有指定`first_column`的值，所以`first_column`的值就是`NULL`，也表示没有数据
+
+#### 批量插入记录
+
+`MySQL`为我们提供了批量插入的语句，就是直接在`VALUES`后多加几组值，每组值用小括号`()`扩起来，各个组之间用逗号分隔就好了，就像这样：
+
+```sql
+mysql> INSERT INTO first_table(first_column, second_column) VALUES(7, 'ggg'), (8, 'hhh');
+```
+
+#### 将某个查询的结果集插入表中
+
+我们想把`first_column`表中的一些数据插入到`second_table`表的话可以这么写：
+
+```sql
+mysql> INSERT INTO second_table(s, i) SELECT second_column, first_column FROM first_table WHERE first_column < 5;
+```
+
+相当于先执行查询语句，再把查询得到的结果插入到指定的表中。
+
+**在将某个查询的结果集插入到表中时需要注意，INSERT语句指定的列要和查询列表中的表达式一一对应**
+
+#### INSERT IGNORE
+
+**对于那些是主键或者具有UNIQUE约束的列或者列组合来说，如果表中已存在的记录中没有与待插入记录在这些列或者列组合上重复的值，那么就把待插入记录插到表中，否则忽略此次插入操作**。`MySQL`给我们提供了`INSERT IGNORE`的语法来实现这个功能：
+
+```sql
+mysql> INSERT IGNORE INTO first_table(first_column, second_column) VALUES(1, '哇哈哈') ;
+Query OK, 0 rows affected, 1 warning (0.00 sec)
+
+mysql>
+```
+
+#### INSERT ON DUPLICATE KEY UPDATE
+
+对于主键或者有唯一性约束的列或列组合来说，新插入的记录如果和表中已存在的记录重复的话，我们可以选择的策略不仅仅是忽略该条记录的插入，也可以选择更新这条重复的旧记录。
+
+**对于那些是主键或者具有UNIQUE约束的列或者列组合来说，如果表中已存在的记录中没有与待插入记录在这些列或者列组合上重复的值，那么就把待插入记录插到表中，否则按照规定去更新那条重复的记录中某些列的值**。`MySQL`给我们提供了`INSERT ... ON DUPLICATE KEY UPDATE ...`的语法来实现这个功能：	这个语句的意思就是，对于要插入的数据`(1, '哇哈哈')`来说，如果`first_table`表中已经存在`first_column`的列值为`1`的记录（因为`first_column`列具有`UNIQUE`约束），那么就把该记录的`second_column`列更新为`'雪碧'`。
+
+```sql
+mysql> INSERT INTO first_table (first_column, second_column) VALUES(1, '哇哈哈') ON DUPLICATE KEY UPDATE second_column = '雪碧';
+Query OK, 2 rows affected (0.00 sec)
+
+mysql>
+mysql> SELECT * FROM first_table;
++--------------+---------------+
+| first_column | second_column |
++--------------+---------------+
+|            1 | 雪碧          |
+|            2 | NULL          |
+|            3 | ccc           |
+|            4 | ddd           |
+|            5 | NULL          |
+|         NULL | fff           |
+|            7 | ggg           |
+|            8 | hhh           |
+|            9 | iii           |
++--------------+---------------+
+9 rows in set (0.00 sec)
+
+mysql>
+```
+
+对于那些是主键或者具有UNIQUE约束的列或者列组合来说，如果表中已存在的记录中有与待插入记录在这些列或者列组合上重复的值，我们可以使用`VALUES(列名)`的形式来引用待插入记录中对应列的值，比方说下边这个INSERT语句：
+
+```sql
+mysql> INSERT INTO first_table (first_column, second_column) VALUES(1, '哇哈哈') ON DUPLICATE KEY UPDATE second_column = VALUES(second_column);
+Query OK, 2 rows affected (0.00 sec)
+
+mysql>
+```
+
+### 删除数据
+
+如果某些记录我们不想要了，那可以使用下边的语句把它们给删除掉：
+
+```sql
+DELETE FROM 表名 [WHERE 表达式];
+DELETE FROM second_table; # 删除所有数据
+```
+
+### 更新数据
+
+我们有时候对于某些记录的某些列的值不满意，需要去修改它们，修改记录的语法就是这样：
+
+```sql
+UPDATE 表名 SET 列1=值1, 列2=值2, ...,  列n=值n [WHERE 布尔表达式];
+```
+
+我们在`UPDATE`单词后边指定要更新的表，然后把你想更新的列的名称和该列更新后的值写到`SET`单词后边，如果想更新多个列的话，它们之间用逗号`,`分隔开。如果我们不指定`WHERE`子句，那么表中所有的记录都会被更新，否则的话只有符合`WHERE`子句中的条件的记录才可以被更新。
+
+## 视图
+
+### 创建视图
+
+我们可以把`视图`理解为一个查询语句的别名，创建`视图`的语句如下：
+
+```sql
+CREATE VIEW 视图名 AS 查询语句
+```
+
+比如我们想来创建一个`视图`可以这么写：
+
+```sql
+mysql> CREATE VIEW male_student_view AS SELECT s1.number, s1.name, s1.major, s2.subject, s2.score FROM student_info AS s1 INNER JOIN student_score AS s2 WHERE s1.number = s2.number AND s1.sex = '男';
+Query OK, 0 rows affected (0.02 sec)
+```
+
+这样，这个名称为`male_student_view`的视图就代表了那一串查询语句了。
+
+### 使用视图
+
+`视图`也可以被称为`虚拟表`，因为我们可以对`视图`进行一些类似表的增删改查操作，对视图的一切操作，都会被映射到底层的表上。查询语句的查询列表可以被当作`视图`的`虚拟列`，比方说`male_student_view`这个视图对应的查询语句中的查询列表是`number`、`name`、`major`、`subject`、`score`，它们就可以被当作`male_student_view`视图的`虚拟列`。
+
+`视图`其实就相当于是某个查询语句的别名！**创建视图的时候并不会把那个又臭又长的查询语句的结果集维护在硬盘或者内存里！在对视图进行查询时，MySQL服务器将会帮助我们把对视图的查询语句转换为对底层表的查询语句然后再执行**
+
+所以在使用层面，我们完全可以把`视图`当作一个表去使用，但是它的实现原理却是在执行语句时转换为对底层表的操作。使用视图的好处也是显而易见的，视图可以简化语句的书写，避免了每次都要写一遍又臭又长的语句，而且对视图的操作更加直观，使用者也不用去考虑它的底层实现细节。
+
+#### 利用视图来创建新视图
+
+视图是某个查询语句的别名，其实这个查询语句不仅可以从真实表中查询数据，也可以从另一个视图中查询数据，只要是个合法的查询语句就好了。比方说我们利用`male_student_view`视图来创建另一个新视图可以这么写：
+
+```sql
+mysql> CREATE VIEW by_view AS SELECT number, name, score FROM male_student_view;
+Query OK, 0 rows affected (0.02 sec)
+```
+
+在对这种依赖其他的视图而生成的新视图进行查询时，查询语句会先被转换成对它依赖的视图的查询，再转换成对底层表的查询。
+
+#### 创建视图时指定自定义列名
+
+`视图`的`虚拟列`其实是这个视图对应的查询语句的查询列表，我们也可以在创建视图的时候为它的`虚拟列`自定义列名，这些自定义列名写到视图名后边，用逗号`,`分隔就好了，不过需要注意的是，自定义列名一定要和查询列表中的表达式一一对应。比如我们新创建一个自定义列名的视图：
+
+```sql
+mysql> CREATE VIEW student_info_view(no, n, m) AS SELECT number, name, major FROM student_info;
+```
+
+我们的自定义列名列表是`no, n, m`，分别对应查询列表中的`number, name, major`。有了自定义列名之后，我们之后对视图的查询语句都要基于这些自定义列名
+
+### 查看和删除视图
+
+我们创建视图时默认是将其放在当前数据库下的，如果我们想查看当前数据库中有哪些视图的话，其实和查看有哪些表的命令是一样的：
+
+```sql
+mysql> SHOW TABLES;
+```
+
+需要注意的是，因为视图是一张`虚拟表`，所以新创建的视图的名称不能和当前数据库中的其他视图或者表的名称冲突！
+
+查看视图定义：
+
+视图是一张`虚拟表`，用来查看视图结构的语句和用来查看表结构的语句比较类似，是这样的：
+
+```sql
+SHOW CREATE VIEW 视图名;
+```
+
+### 可更新的视图
+
+有些视图是可更新的，也就是在视图上执行`INSERT`、`DELETE`、`UPDATE`语句。对视图执行INSERT、DELETE、UPDATE语句的本质上是对该视图对应的底层表中的数据进行增、删、改操作。
+
+不过并不是可以在所有的视图上执行更新语句的，在生成视图的时候使用了下边这些语句的都不能进行更新：
+
+- 聚集函数（比如SUM(), MIN(), MAX(), COUNT()等等）
+- DISTINCT
+- GROUP BY
+- HAVING
+- UNION 或者 UNION ALL
+- 某些子查询
+- 某些连接查询
+- 等等等等
+
+**一般我们只在查询语句里使用视图，而不在INSERT、DELETE、UPDATE语句里使用视图**
+
+### 删除视图
+
+如果某个视图我们不想要了，可以使用这个语句来删除掉它：
+
+```sql
+DROP VIEW 视图名
+```
+
+## 自定义变量和语句结束分隔符
+
