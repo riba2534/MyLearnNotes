@@ -1773,3 +1773,646 @@ DROP VIEW 视图名
 
 ## 自定义变量和语句结束分隔符
 
+### 存储程序
+
+`存储程序`可以封装一些语句，然后给用户提供一种简单的方式来调用这个存储程序，从而间接地执行这些语句。根据调用方式的不同，我们可以把`存储程序`分为`存储例程`、`触发器`和`事件`这几种类型。其中，`存储例程`又可以被细分为`存储函数`和`存储过程`。如图：
+
+
+
+![image_1c84n8aqm1snl1iql9eb1tpa6v19.png-29.4kB](MySQL语句学习笔记.assets/16ce116e5cb5079c)
+
+### 自定义变量简介
+
+MySQL中支持自定义变量，比如：
+
+```sql
+SET @a = 1;
+```
+
+需要注意的是，需要在变量前写上`@`符号。
+
+可以把常量赋值给变量，也可以把变量赋值给变量。
+
+还可以将某个查询的结果赋值给一个变量，前提是这个查询的结果只有一个值：
+
+```sql
+mysql> SET @a = (SELECT m1 FROM t1 LIMIT 1);
+```
+
+还可以用另一种形式的语句来将查询的结果赋值给一个变量：
+
+```sql
+SELECT n1 FROM t1 LIMIT 1 INTO @b;
+```
+
+### 语句结束分割符
+
+在`MySQL`客户端的交互界面处，当我们完成键盘输入并按下回车键时，`MySQL`客户端会检测我们输入的内容中是否包含`;`、`\g`或者`\G`这三个符号之一，如果有的话，会把我们输入的内容发送到服务器。这样一来，如果我们想一次性给服务器发送多条的话，就需要把这些语句写到一行中
+
+我们也可以用`delimiter`命令来自定义`MySQL`的检测语句输入结束的符号，也就是所谓的`语句结束分隔符`，比如这样：
+
+```sql
+mysql> delimiter $
+mysql> SELECT * FROM t1 LIMIT 1;
+    -> SELECT * FROM t2 LIMIT 1;
+    -> SELECT * FROM t3 LIMIT 1;
+    -> $
++------+------+
+| m1   | n1   |
++------+------+
+|    1 | a    |
++------+------+
+1 row in set (0.00 sec)
+```
+
+`delimiter $`命令意味着修改语句结束分隔符为`$`，也就是说之后`MySQL`客户端检测用户语句输入结束的符号为`$`。上边例子中我们虽然连续输入了3个以分号`;`结尾的查询语句并且按了回车键，但是输入的内容并没有被提交，直到敲下`$`符号并回车，`MySQL`客户端才会将我们输入的内容提交到服务器，此时我们输入的内容里已经包含了3个独立的查询语句了，所以返回了3个结果集。
+
+## 存储函数和存储过程
+
+### 存储函数
+
+#### 创建存储函数
+
+`存储函数`其实就是一种`函数`，只不过在这个函数里可以执行`MySQL`的语句而已。`函数`的概念大家都应该不陌生，它可以把处理某个问题的过程封装起来，之后我们直接调用函数就可以去解决这个问题了，简单方便又环保。`MySQL`中定义`存储函数`的语句如下：
+
+```sql
+CREATE FUNCTION 存储函数名称([参数列表])
+RETURNS 返回值类型
+BEGIN
+    函数体内容
+END
+```
+
+从这里我们可以看出，定义一个`存储函数`需要指定函数名称、参数列表、返回值类型以及函数体内容。如果该函数不需要参数，那参数列表可以被省略，函数体内容可以包括一条或多条语句，每条语句都要以分号`;`结尾。上边语句中的制表符和换行仅仅是为了好看，如果你觉得烦，完全可以把存储函数的定义都写在一行里，用一个或多个空格把上述几个部分分隔开就好！ 光看定义理解的不深刻，我们先写一个`存储函数`开开眼：
+
+```sql
+mysql> delimiter $
+mysql> CREATE FUNCTION avg_score(s VARCHAR(100))
+    -> RETURNS DOUBLE
+    -> BEGIN
+    ->     RETURN (SELECT AVG(score) FROM student_score WHERE subject = s);
+    -> END $
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> delimiter ;
+```
+
+我们定义了一个名叫`avg_score`的函数，它接收一个`VARCHAR(100)`类型的参数，声明的返回值类型是`DOUBLE`，需要注意的是，我们在`RETURN`语句后边写了一个`SELECT`语句，表明这个函数的返回结果就是根据这个查询语句产生的，也就是返回了指定科目的平均成绩。
+
+#### 存储函数的调用
+
+我们自定义的函数和系统内置函数的使用方式是一样的，都是在函数名后加小括号`()`表示函数调用，调用有参数的函数时可以把参数写到小括号里边。函数调用可以放到查询列表或者作为搜索条件，或者和别的操作数一起组成更复杂的表达式，我们现在来调用一下刚刚写好的这个名为`avg_score`的函数吧：
+
+```sql
+mysql> SELECT avg_score('母猪的产后护理');
++------------------------------------+
+| avg_score('母猪的产后护理')        |
++------------------------------------+
+|                                 73 |
++------------------------------------+
+1 row in set (0.00 sec)
+
+mysql> SELECT avg_score('论萨达姆的战争准备');
++------------------------------------------+
+| avg_score('论萨达姆的战争准备')          |
++------------------------------------------+
+|                                    73.25 |
++------------------------------------------+
+1 row in set (0.00 sec)
+
+mysql>
+```
+
+通过调用函数的方式而不是直接写查询语句的方式来获取某门科目的平均成绩看起来就简介多了。
+
+#### 查看和删除存储函数
+
+如果我们想查看我们已经定义了多少个存储函数，可以使用下边这个语句：
+
+```sql
+SHOW FUNCTION STATUS [LIKE 需要匹配的函数名]
+```
+
+由于这个命令得到的结果太多，我们就不演示了哈，大家可以自己试试。如果我们想查看某个函数的具体是怎么定义的，可以使用这个语句：
+
+```sql
+SHOW CREATE FUNCTION 函数名
+```
+
+比如：
+
+```sql
+mysql> SHOW CREATE FUNCTION avg_score\G
+*************************** 1. row ***************************
+            Function: avg_score
+            sql_mode: ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
+     Create Function: CREATE DEFINER=`root`@`localhost` FUNCTION `avg_score`(s VARCHAR(100)) RETURNS double
+BEGIN
+RETURN (SELECT AVG(score) FROM student_score WHERE subject = s);
+END
+character_set_client: utf8
+collation_connection: utf8_general_ci
+  Database Collation: utf8mb4_general_ci
+1 row in set (0.00 sec)
+```
+
+如果需要删除函数，可以使用：
+
+```sql
+DROP FUNCTION 函数名
+```
+
+比如我们来删掉`avg_score`这个函数：
+
+```sql
+mysql> DROP FUNCTION avg_score;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql>
+```
+
+### 函数体定义
+
+上边定义的`avg_score`的函数体里边只包含一条语句，如果只为了节省书写一条语句的时间而定义一个存储函数，其实也不是很值～ 其实存储函数的函数体中可以包含多条语句，并且支持一些特殊的语法来供我们使用
+
+#### 在函数内部定义局部变量
+
+在函数体内可以定义局部变量，作用域是这个函数，但是定义变量前首先需要声明，声明方式如下：
+
+```sql
+DECLARE 变量名1, 变量名2, ... 数据类型 [DEFAULT 默认值];
+```
+
+例子：
+
+```sql
+mysql> delimiter $;
+mysql> CREATE FUNCTION var_demo()
+-> RETURNS INT
+-> BEGIN
+->     DECLARE c INT;
+->     SET c = 5;
+->     RETURN c;
+-> END $
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> delimiter ;
+```
+
+我们定义了一个名叫`var_demo`而且不需要参数的函数，然后在函数体中声明了一个名称为`c`的`INT`类型的局部变量，之后我们调用`SET`语句为这个局部变量赋值了整数`5`，并且把局部变量`c`当作函数结果返回
+
+如果我们不对声明的局部变量赋值的话，它的默认值就是`NULL`，当然我们也可以通过`DEFAULT`子句来显式的指定局部变量的默认值，比如这样：
+
+```sql
+mysql> delimiter $
+mysql> CREATE FUNCTION var_default_demo()
+-> RETURNS INT
+-> BEGIN
+->     DECLARE c INT DEFAULT 1;
+->     RETURN c;
+-> END $
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> delimiter ;
+mysql>
+```
+
+#### 在函数体中使用自定义变量
+
+在函数体内，如果通过 `SET @` 的方式定义变量，那么在函数体外，这个变量的值仍然可以访问到。
+
+#### 存储函数的参数
+
+在定义存储函数的时候，可以指定多个参数，每个参数都要指定对应的数据类型，就像这样：
+
+```
+参数名 数据类型
+```
+
+比如我们上边编写的这个`avg_score`函数：
+
+```sql
+CREATE FUNCTION avg_score(s VARCHAR(100))
+RETURNS DOUBLE
+BEGIN
+    RETURN (SELECT AVG(score) FROM student_score WHERE subject = s);
+END
+```
+
+这个函数只需要一个类型为`VARCHAR(100)`参数，我们这里给这个参数起的名称是`s`，不过这个参数名不要和函数体语句中的其他变量名、列名啥的冲突，比如上边的例子中如果把变量名`s`改为为`subject`，它就与下边用到`WHERE`子句中的列名冲突了。
+
+另外，函数参数不可以指定默认值，我们在调用函数的时候，必须显式的指定所有的参数，并且参数类型也一定要匹配，比方说我们在调用函数`avg_score`时，必须指定我们要查询的课程名，不然会报错的：
+
+```sql
+mysql> select avg_score();
+ERROR 1318 (42000): Incorrect number of arguments for FUNCTION xiaohaizi.avg_score; expected 1, got 0
+mysql>
+```
+
+#### 判断语句的编写
+
+在存储函数的函数体里也可以使用判断的语句，语法格式如下：
+
+```sql
+IF 表达式 THEN
+    处理语句列表
+[ELSEIF 表达式 THEN
+    处理语句列表]
+... # 这里可以有多个ELSEIF语句
+[ELSE
+    处理语句列表]
+END IF;
+```
+
+其中`处理语句列表`中可以包含多条语句，每条语句以分号`;`结尾就好。
+
+举一个包含`IF`语句的存储函数的例子：
+
+```sql
+mysql> delimiter $
+mysql> CREATE FUNCTION condition_demo(i INT)
+-> RETURNS VARCHAR(10)
+-> BEGIN
+->     DECLARE result VARCHAR(10);
+->     IF i = 1 THEN
+->         SET result = '结果是1';
+->     ELSEIF i = 2 THEN
+->         SET result = '结果是2';
+->     ELSEIF i = 3 THEN
+->         SET result = '结果是3';
+->     ELSE
+->         SET result = '非法参数';
+->     END IF;
+->     RETURN result;
+-> END $
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> delimiter ;
+mysql>
+```
+
+#### 循环语句
+
+- **`WHILE`循环语句**：
+
+```sql
+WHILE 表达式 DO
+    处理语句列表
+END WHILE;
+```
+
+这个语句的意思是：如果满足给定的表达式，则执行处理语句，否则退出循环。比如我们想定义一个计算从`1`到`n`这`n`个数的和（假设`n`大于`0`）的存储函数，可以这么写：
+
+```sql
+mysql> delimiter $
+mysql> CREATE FUNCTION sum_all(n INT UNSIGNED)
+-> RETURNS INT
+-> BEGIN
+->     DECLARE result INT DEFAULT 0;
+->     DECLARE i INT DEFAULT 1;
+->     WHILE i <= n DO
+->         SET result = result + i;
+->         SET i = i + 1;
+->     END WHILE;
+->     RETURN result;
+-> END $
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> delimiter ;
+mysql>
+```
+
+- `REPEAT`循环语句
+
+  `REPEAT`循环语句和`WHILE`循环语句类似，只是形式上变了一下：
+
+  ```sql
+  REPEAT
+      处理语句列表
+  UNTIL 表达式 END REPEAT;
+  ```
+
+  先执行处理语句，再判断`表达式`是否成立，如果成立则退出循环，否则继续执行处理语句。与`WHILE`循环语句不同的一点是：WHILE循环语句先判断表达式的值，再执行处理语句，REPEAT循环语句先执行处理语句，再判断表达式的值，所以至少执行一次处理语句，所以如果`sum_all`函数用`REPEAT`循环改写，可以写成这样：
+
+  ```sql
+  CREATE FUNCTION sum_all(n INT UNSIGNED)
+  RETURNS INT
+  BEGIN
+      DECLARE result INT DEFAULT 0;
+      DECLARE i INT DEFAULT 1;
+      REPEAT
+          SET result = result + i;
+          SET i = i + 1;
+      UNTIL i > n END REPEAT;
+      RETURN result;
+  END
+  ```
+
+- `LOOP`循环语句
+
+  这只是另一种形式的循环语句：
+
+  ```sql
+  LOOP
+      处理语句列表
+  END LOOP;
+  ```
+
+  不过这种循环语句有一点比较奇特，它没有判断循环终止的条件？那这个循环语句怎么停止下来呢？其实可以把循环终止的条件写到处理语句列表中然后使用`RETURN`语句直接让函数结束就可以达到停止循环的效果，比方说我们可以这样改写`sum_all`函数：
+
+  ```sql
+  CREATE FUNCTION sum_all(n INT UNSIGNED)
+  RETURNS INT
+  BEGIN
+      DECLARE result INT DEFAULT 0;
+      DECLARE i INT DEFAULT 1;
+      LOOP
+          IF i > n THEN
+              RETURN result;
+          END IF;
+          SET result = result + i;
+          SET i = i + 1;
+      END LOOP;
+  END
+  ```
+
+如果我们仅仅想结束循环，而不是使用`RETURN`语句直接将函数返回，那么可以使用`LEAVE`语句。不过使用`LEAVE`时，需要先在`LOOP`语句前边放置一个所谓的`标记`，比方说我们使用`LEAVE`语句再改写`sum_all`函数：
+
+```sql
+CREATE FUNCTION sum_all(n INT UNSIGNED)
+RETURNS INT
+BEGIN
+    DECLARE result INT DEFAULT 0;
+    DECLARE i INT DEFAULT 1;
+    flag:LOOP
+        IF i > n THEN
+            LEAVE flag;
+        END IF;
+        SET result = result + i;
+        SET i = i + 1;
+    END LOOP flag;
+    RETURN result;
+END
+```
+
+可以看到，我们在`LOOP`语句前加了一个`flag:`这样的东东，相当于为这个循环打了一个名叫`flag`的标记，然后在对应的`END LOOP`语句后边也把这个标记名`flag`给写上了。在存储函数的函数体中使用`LEAVE flag`语句来结束`flag`这个标记所代表的循环。
+
+### 存储过程
+
+#### 存储过程定义
+
+`存储函数`和`存储过程`都属于`存储例程`，都是对某些语句的一个封装。`存储函数`侧重于执行这些语句并返回一个值，而`存储过程`更侧重于单纯的去执行这些语句。先看一下`存储过程`的定义语句：
+
+```sql
+CREATE PROCEDURE 存储过程名称([参数列表])
+BEGIN
+    需要执行的语句
+END
+```
+
+与`存储函数`最直观的不同点就是，`存储过程`的定义不需要声明`返回值类型`。
+
+比如：
+
+```sql
+mysql> delimiter $
+mysql> CREATE PROCEDURE t1_operation(
+    ->     m1_value INT,
+    ->     n1_value CHAR(1)
+    -> )
+    -> BEGIN
+    ->     SELECT * FROM t1;
+    ->     INSERT INTO t1(m1, n1) VALUES(m1_value, n1_value);
+    ->     SELECT * FROM t1;
+    -> END $
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> delimiter ;
+mysql>
+```
+
+我们建立了一个名叫`t1_operation`的存储过程，它接收两个参数，一个是`INT`类型的，一个是`CHAR(1)`类型的。这个存储过程做了3件事儿，一件是查询一下`t1`表中的数据，第二件是根据接收的参数来向`t1`表中插入一条语句，第三件是再次查询一下`t1`表中的数据。
+
+#### 存储过程调用
+
+`存储函数`执行语句并返回一个值，所以常用在表达式中。`存储过程`偏向于执行某些语句，并不能用在表达式中，我们需要显式的使用`CALL`语句来调用一个`存储过程`：
+
+```sql
+CALL 存储过程([参数列表]);
+```
+
+比方说我们调用一下`t1_operation`存储过程可以这么写：
+
+```sql
+mysql> CALL t1_operation(4, 'd');
+```
+
+#### 查看或删除存储过程
+
+与`存储函数`类似，`存储过程`也有相似的查看和删除语句，我们下边只列举一下相关语句，就不举例子了。
+
+查看当前数据库中创建的`存储过程`都有哪些的语句：
+
+```sql
+SHOW PROCEDURE STATUS [LIKE 需要匹配的存储过程名称]
+```
+
+查看某个`存储过程`具体是怎么定义的语句：
+
+```sql
+SHOW CREATE PROCEDURE 存储过程名称
+```
+
+删除`存储过程`的语句：
+
+```sql
+DROP PROCEDURE 存储过程名称
+```
+
+#### 存储过程中的语句
+
+与存储函数保持一致
+
+#### 存储过程的参数前缀
+
+比`存储函数`强大的一点是，`存储过程`在定义参数的时候可以选择添加一些前缀，就像是这个样子：
+
+```sql
+参数类型 [IN | OUT | INOUT] 参数名 数据类型
+```
+
+可以看到可选的前缀有下边3种：
+
+|  前缀   | 实际参数是否必须是变量 |                             描述                             |
+| :-----: | :--------------------: | :----------------------------------------------------------: |
+|  `IN`   |           否           | 用于调用者向存储过程传递数据，如果IN参数在过程中被修改，调用者不可见。 |
+|  `OUT`  |           是           | 用于把存储过程运行过程中产生的数据赋值给OUT参数，存储过程执行结束后，调用者可以访问到OUT参数。 |
+| `INOUT` |           是           | 综合`IN`和`OUT`的特点，既可以用于调用者向存储过程传递数据，也可以用于存放存储过程中产生的数据以供调用者使用。 |
+
+- `IN`参数
+
+  先定义一个参数前缀是`IN`的存储过程`p_in`：
+
+  ```sql
+  mysql> delimiter $
+  mysql> CREATE PROCEDURE p_in (
+  ->     IN arg INT
+  -> )
+  -> BEGIN
+  ->     SELECT arg;
+  ->     SET arg = 123;
+  -> END $
+  Query OK, 0 rows affected (0.00 sec)
+  
+  mysql> delimiter ;
+  mysql>
+  ```
+
+  这个`p_in`存储过程只有一个参数`arg`，它的前缀是`IN`。这个存储过程实际执行两个语句，第一个语句是用来读取参数`arg`的值，第二个语句是给参数`arg`赋值。我们调用一下`p_in`：
+
+  ```sql
+  mysql> SET @a = 1;
+  Query OK, 0 rows affected (0.00 sec)
+  
+  mysql> CALL p_in(@a);
+  +------+
+  | arg  |
+  +------+
+  |    1 |
+  +------+
+  1 row in set (0.00 sec)
+  
+  Query OK, 0 rows affected (0.00 sec)
+  
+  mysql> SELECT @a;
+  +------+
+  | @a   |
+  +------+
+  |    1 |
+  +------+
+  1 row in set (0.00 sec)
+  
+  mysql>
+  ```
+
+  我们定义了一个变量`a`并把整数`1`赋值赋值给它，因为它是在客户端定义的，所以需要加`@`前缀，然后把它当作参数传给`p_in`存储过程。从结果中可以看出，第一个读取语句被成功执行，虽然第二个语句没有报错，但是在存储过程执行完毕后，再次查看变量`a`的值却并没有改变，这也就是说：IN参数只能被用于读取，对它赋值是不会被调用者看到的。
+
+  另外，因为我们只是想在存储过程执行中使用IN参数，并不需要把执行过程中产生的数据存储到它里边，所以其实在调用存储过程时，将常量作为参数也是可以的，比如这样：
+
+  ```sql
+  mysql> CALL p_in(1);
+  +------+
+  | arg  |
+  +------+
+  |    1 |
+  +------+
+  1 row in set (0.00 sec)
+  
+  Query OK, 0 rows affected (0.00 sec)
+  
+  mysql>
+  ```
+
+- `OUT`参数
+
+  先定义一个前缀是`OUT`的存储过程`p_out`：
+
+  ```sql
+  mysql> delimiter $
+  mysql> CREATE PROCEDURE p_out (
+  ->     OUT arg INT
+  -> )
+  -> BEGIN
+  ->     SELECT arg;
+  ->     SET arg = 123;
+  -> END $
+  Query OK, 0 rows affected (0.00 sec)
+  
+  mysql> delimiter ;
+  mysql>
+  ```
+
+  这个`p_out`存储过程只有一个参数`arg`，它的前缀是`OUT`，`p_out`存储过程也有两个语句，一个用于读取参数`arg`的值，另一个用于为参数`arg`赋值，我们调用一下`p_out`：
+
+  ```sql
+  mysql> SET @b = 2;
+  Query OK, 0 rows affected (0.00 sec)
+  
+  mysql> CALL p_out(@b);
+  +------+
+  | arg  |
+  +------+
+  | NULL |
+  +------+
+  1 row in set (0.00 sec)
+  
+  Query OK, 0 rows affected (0.00 sec)
+  
+  mysql> SELECT @b;
+  +------+
+  | @b   |
+  +------+
+  |  123 |
+  +------+
+  1 row in set (0.00 sec)
+  
+  mysql>
+  ```
+
+  我们定义了一个变量`b`并把整数`2`赋值赋值给它，然后把它当作参数传给`p_out`存储过程。从结果中可以看出，第一个读取语句并没有获取到参数的值，也就是说OUT参数的值默认为`NULL`。在存储过程执行完毕之后，再次读取变量`b`的值，发现它的值已经被设置成`123`，说明在过程中对该变量的赋值对调用者是可见的！这也就是说：OUT参数只能用于赋值，对它赋值是可以被调用者看到的。
+
+  另外，由于`OUT`参数只是为了用于将存储过程执行过程中产生的数据赋值给它后交给调用者查看，那么在调用存储过程时，实际的参数就不允许是常量！
+
+- `INOUT`参数
+
+  知道了`IN`参数和`OUT`参数的意思，`INOUT`参数也就明白了，这种参数既可以在存储过程中被读取，也可以被赋值后被调用者看到，所以要求在调用存储过程时实际的参数必须是一个变量
+
+需要注意的是，如果我们不写明参数前缀的话，默认的前缀是IN！
+
+由于存储过程可以传入多个`OUT`或者`INOUT`类型的参数，所以我们可以在一个存储过程中获得多个结果，比如这样：
+
+```sql
+mysql> delimiter $
+mysql> CREATE PROCEDURE get_score_data(
+    ->     OUT max_score DOUBLE,
+    ->     OUT min_score DOUBLE,
+    ->     OUT avg_score DOUBLE,
+    ->     s VARCHAR(100)
+    -> )
+    -> BEGIN
+    ->     SELECT MAX(score), MIN(score), AVG(score) FROM student_score WHERE subject = s INTO max_score, min_score, avg_score;
+    -> END $
+Query OK, 0 rows affected (0.02 sec)
+
+mysql> delimiter ;
+mysql>
+```
+
+我们定义的这个`get_score_data`存储过程接受4个参数，前三个参数都是`OUT`参数，第四个参数没写前缀，默认就是`IN`参数。存储过程的内容是将指定学科的最高分、最低分、平均分分别赋值给三个`OUT`参数。在这个存储过程执行完之后，我们可以通过访问这几个`OUT`参数来获得相应的最高分、最低分以及平均分：
+
+```sql
+mysql> CALL get_score_data(@a, @b, @c, '母猪的产后护理');
+Query OK, 1 row affected (0.01 sec)
+
+mysql> SELECT @a, @b, @c;
++------+------+------+
+| @a   | @b   | @c   |
++------+------+------+
+|  100 |   55 |   73 |
++------+------+------+
+1 row in set (0.00 sec)
+
+mysql>
+```
+
+### 存储过程和存储函数的不同点
+
+`存储过程`和`存储函数`非常类似，我们列举几个它们的不同点以加深大家的对这两者区别的印象：
+
+- 存储函数在定义时需要显式用`RETURNS`语句标明返回的数据类型，而且在函数体中必须使用`RETURN`语句来显式指定返回的值，存储过程不需要。
+- 存储函数只支持`IN`参数，而存储过程支持`IN`参数、`OUT`参数、和`INOUT`参数。
+- 存储函数只能返回一个值，而存储过程可以通过设置多个`OUT`参数或者`INOUT`参数来返回多个结果。
+- 存储函数执行过程中产生的结果集并不会被显示到客户端，而存储过程执行过程中产生的结果集会被显示到客户端。
+- 存储函数直接在表达式中调用，而存储过程只能通过`CALL`语句来显式调用。
+
+## 游标的使用
