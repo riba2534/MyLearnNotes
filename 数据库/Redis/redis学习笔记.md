@@ -439,7 +439,65 @@ cat redis.conf| grep -v "#" | grep -v "^$"
 
 将所有的以`#`号开头的行，和所有的空行全部去除掉，`grep -v` 加关键字可以去指定关键字开头的行。
 
-`redis.conf`详解：
+### 重要配置
+
+- 设置服务器以守护进程方式运行
+
+  ```
+  daemonize yes|no
+  ```
+
+- 绑定主机地址
+
+  ```
+  bind 127.0.0.1
+  ```
+
+- 设置服务器端口号
+
+  ```
+  port 6379
+  ```
+
+- 设置数据库数量
+
+  ```
+  database 16
+  ```
+
+- 设置服务器以指定日志记录级别
+
+  ```
+  loglevel debug|verbose|notice|warning # 日志级别开发期为verbose，生产环境建议 notice
+  ```
+
+- 日志记录文件名
+
+  ```
+  logfile 端口号.log
+  ```
+
+- 设置同一时间最大客户连接数，默认无限制。客户端连接数达到上限，redis就会关闭新链接
+
+  ```
+  maxclients 0
+  ```
+
+- 客户端闲置等待最大时常，达到最大值后关闭连接
+
+  ```
+  timeout 300
+  ```
+
+- **多服务器配置**：导入并加载指定配置文件信息，用于快速创建redis公共配置较多的redis实例配置文件
+
+  ```
+  include /path/redis.conf
+  ```
+
+  
+
+### `redis.conf`详解：
 
 ```
 # redis.conf
@@ -1092,3 +1150,259 @@ redis是一种内存级数据库，所有数据放在内存中，内存中的数
 
 ### 数据删除策略
 
+#### 定时删除
+
+- 创建一个定时器，当key设置有过期时间，且过期时间到达时，由定时器任务立即执行对键的删除操作
+- 优点：节约内存，到时就删除，快速释放掉不必要的内存占用
+- 缺点：CPU压力很大，无论此时CPU负载有多高，均占用CPU，会影响redis服务器的响应时间和指令吞吐量
+- 总结：用处理器性能换取时间
+
+#### 惰性删除
+
+- 数据到达过期时间，不做处理，等下次访问该数据时，判断一下，执行删除，返回空
+- 优点：节约CPU性能，发现必须删除再删除
+- 缺点：内存压力很大，出现长期占用内存数据
+- 用时间换空间
+
+#### 定期删除
+
+上面两种方案都太极端。redis采用折中方案：
+
+- 周期性轮询redis中的时效性数据，采用随机抽取策略，利用过期时间占比的方式控制删除频度
+- 特点1：CPU性能占用设置有峰值，检测频度可以自定义设置
+- 特点2：内存压力不是很大， 长期占用内存的冷数据会被持续清理
+- 总结：周期性检查存储空间
+
+### 逐出算法
+
+redis使用内存存储数据，在执行一个命令前，会调用 `freeMemoryIfNeeded()` 检测内存是否充足。如果内存不满足新加入数据的最低存储要求，redis要临时删除一些数据为当前指令清理存储空间。清理数据的策略被称为逐出算法。
+
+逐出算法不是 100% 可以清理出存储空间，如果不成功会反复执行。当所有数据尝试完毕以后，如果不能达到内存的清理要求，会出现错误信息。
+
+#### 逐出相关配置
+
+在配置文件中：
+
+- 最大可使用内存
+
+```
+maxmemory
+```
+
+默认为0，表示不限制。生产环境中根据需求设定。
+
+- 每次选取待删除数据的个数
+
+```
+maxmemory-samples
+```
+
+选取数据时并不会全库扫描，导致严重的性能损耗，降低读写性能。因此采用随机获取数据的方式作为待检测删除数据。
+
+- 删除策略
+
+```
+maxmemory-policy volatile-lru
+```
+
+达到最大内存后，对被挑选出来的数据进行删除的策略。
+
+数据逐出相关策略：
+
+检测易失数据（可能会过期的数据集`server.db[i].expires`）
+
+- `volatile-lru`：挑选最近最少使用的数据淘汰（按时间选）**早期默认为这个**
+- `volatile-lfu`：挑选最近使用次数最少的数据淘汰（按使用次数选）
+- `volatile-ttl`：挑选要过期的数据淘汰
+- `volatile-random`：随机挑选数据进行淘汰
+
+检测全库数据（所有数据集`server.db[i].dict`）
+
+- `allkeys-lru`
+- `allkeys-lfu`
+- `allkeys-random`
+
+放弃数据驱逐：
+
+- `no-enviction`：进制驱逐数据，redis4.0默认策略，可能造成内存泄漏
+
+## redis 高级数据类型
+
+### `Bitmaps`
+
+#### 基础操作
+
+```
+# 获取指定key对应偏移量的bit值
+getbit key offset
+
+# 设置指定key对应偏移量的bit值，只能为0或1
+setbit key offset value
+```
+
+#### 扩展操作
+
+```
+# 对指定的key按位进行交、并、非、异或的操作，并且将结果保存在desykey中
+# and 交，or 并，not 非，xor 异或
+bitop op destkey key1 [key2...]
+
+# 统计指定key中1的数量
+bitcount key [st ed]
+```
+
+### `HyperLogLog`
+
+Redis 在 2.8.9 版本添加了 HyperLogLog 结构。
+
+Redis HyperLogLog 是用来做基数统计的算法，HyperLogLog 的优点是，在输入元素的数量或者体积非常非常大时，计算基数所需的空间总是固定 的、并且是很小的。
+
+在 Redis 里面，每个 HyperLogLog 键只需要花费 12 KB 内存，就可以计算接近 2^64 个不同元素的基 数。这和计算基数时，元素越多耗费内存就越多的集合形成鲜明对比。
+
+但是，因为 HyperLogLog 只会根据输入元素来计算基数，而不会储存输入元素本身，所以 HyperLogLog 不能像集合那样，返回输入的各个元素。
+
+```
+# 添加数据
+pfadd key element [element...]
+
+# 统计数据
+pfcount key [key ...]
+
+# 合并数据
+pfmerge destkey sourcekey [sourcekey...]
+```
+
+### `GEO`
+
+Redis 是最热门的 nosql 数据库之一，它的最大特点就是快。
+所以在 LBS 这种需要大量写入和查询的应用场景中，用它来存储用户的地理位置信息最适合不过了。
+
+Redis 的 GEO 是 3.2 版本的新特性。这个功能可以将用户给定的地理位置信息储存起来， 并对这些信息进行操作。
+
+目前 redis 支持以下 6 个 GEO 的相关操作
+
+- geoadd：增加某个地理位置的坐标。
+- geopos：获取某个地理位置的坐标。
+- geodist：获取两个地理位置的距离。
+- georadius：根据给定地理位置坐标获取指定范围内的地理位置集合。
+- georadiusbymember：根据给定地理位置获取指定范围内的地理位置集合。
+- geohash：获取某个地理位置的geohash值。
+
+基本操作：
+
+```
+# 添加坐标点
+GEOADD key longitude latitude member [longitude latitude member ...]
+
+# 获取坐标点
+GEOPOS key member [member ...]
+
+# 计算坐标点中距离
+GEODIST key member1 member2 [unit]
+
+# 根据坐标求范围内的数据
+GEORADIUS key longitude latitude radius m|km|ft|mi [WITHCOORD] [WITHDIST] [WITHHASH] [COUNT count] [ASC|DESC] [STORE key] [STOREDIST key]
+
+# 根据点求范围内数据
+GEORADIUSBYMEMBER key member radius m|km|ft|mi [WITHCOORD] [WITHDIST] [WITHHASH] [COUNT count] [ASC|DESC] [STORE key] [STOREDIST key]
+
+# 获取指定点对应的坐标hash值
+GEOHASH key member [member ...]
+```
+
+## 主从复制
+
+互联网「三高」架构：
+
+- 高并发
+- 高性能
+- 高可用
+
+互联网可用性计算标准：
+
+> 一年总共有 `365*24*60*60=31536000` 秒，假设服务器宕机 x 秒，则可用性为：`(31536000-x)/31536000*100%` ,值即为可用性。
+>
+> 业界可用性目标为 5 个 9 ，即服务器全年宕机时常低于315秒，约 5.25 分钟
+
+### 多台服务器连接方案
+
+- 提供数据方 `master`
+  - 主服务器，主节点，主库，主客户端
+- 接受数据费 `slave`
+  - 从服务器，从节点，从库，从客户端
+- 需要解决的问题：
+  - 数据同步
+- 核心工作：
+  - master数据复制到slave中
+
+### 主从复制简介
+
+将master的数据及时，有效的复制到slave中
+
+特征：一个master可以拥有多个slave，但是一个slave只对应一个master
+
+**主写从读**
+
+职责：
+
+- master
+  - 写数据
+  - 执行写操作时，将出现变化的数据自动同步到slave上
+  - 读数据（可忽略）
+- slave
+  - 读数据
+  - 写数据（禁止）
+
+主从复制作用：
+
+- 读写分离：master写，slave读，提高服务器读写负载能力
+- 负载均衡：基于主从结构，配合读写分离，slave分担master的负载，根据需求的变化，改变slave的数量，通过多个从节点分担数据负载，提高并发量与数据吞吐量
+- 故障恢复：当master出现问题，由slave提供服务，实现快速的故障恢复。
+- 高可用基石：基于主从复制，构建哨兵模式与集群，实现redis的高可用方案。
+
+### 主从复制工作流程
+
+主从复制过程大概可以分为三个阶段：
+
+- 建立连接阶段
+- 数据同步阶段
+- 命令传播阶段
+
+建立连接阶段工作流程：
+
+1. 设置master的地址和端口，保存master信息
+2. 建立socket连接
+3. 发送ping命令
+4. 身份验证
+5. 发送slave端口信息
+
+至此，主从连接成功！
+
+状态：
+
+```
+slave:
+保存master的地址与端口。
+master:
+保存slave的端口。
+```
+
+### 主从连接（slave 连接 master）
+
+```
+# 方式一：客户端发送命令
+slaveof <masterip> <masterport>
+
+# 方式二：启动服务器参数
+redis-server -slaveof <masterip> <masterport>
+
+# 方式三：服务器配置
+slaveofg <masterip> <masterport>
+```
+
+- slave系统信息
+  - master_link_down_since_seconds
+  - masterhost
+  - masterport
+- master系统信息
+  - slave_listening_port（多个）
