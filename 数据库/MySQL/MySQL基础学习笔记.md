@@ -1779,7 +1779,7 @@ DROP VIEW 视图名
 
 
 
-![image_1c84n8aqm1snl1iql9eb1tpa6v19.png-29.4kB](MySQL语句学习笔记.assets/16ce116e5cb5079c)
+![image_1c84n8aqm1snl1iql9eb1tpa6v19.png-29.4kB](MySQL基础学习笔记.assets/16ce116e5cb5079c)
 
 ### 自定义变量简介
 
@@ -2416,3 +2416,526 @@ mysql>
 - 存储函数直接在表达式中调用，而存储过程只能通过`CALL`语句来显式调用。
 
 ## 游标的使用
+
+### 游标的简介
+
+截止到现在为止，我们只能使用`SELECT ... INTO ...`语句将一条记录的各个列值赋值到多个变量里，比如在前边的`get_score_data`存储过程里有这样的语句：
+
+```sql
+SELECT MAX(score), MIN(score), AVG(score) FROM student_score WHERE subject = s INTO max_score, min_score, avg_score;
+```
+
+但是如果某个查询语句的结果集中有多条记录的话，我们就无法把它们赋值给某些变量了～ 所以为了方便我们去访问这些有多条记录的结果集，`MySQL`中引入了`游标`的概念。
+
+`游标`既可以用在存储函数中，也可以用在存储过程中，我们下边以存储过程为例来说明`游标`的使用方式，它的使用大致分成这么四个步骤：
+
+1. 创建游标
+2. 打开游标
+3. 通过游标访问记录
+4. 关闭游标
+
+### 创建游标
+
+```mysql
+DECLARE 游标名称 CURSOR FOR 查询语句;
+```
+
+我们定义一个存储过程试一试：
+
+```sql
+CREATE PROCEDURE cursor_demo()
+BEGIN
+    DECLARE t1_record_cursor CURSOR FOR SELECT m1, n1 FROM t1;
+END
+```
+
+这样名叫`t1_record_cursor`的游标就创建成功了。
+
+> 如果存储程序中也有声明局部变量的语句，创建游标的语句一定要放在局部变量声明后头。
+
+### 打开和关闭游标
+
+在创建完游标之后，我们需要手动打开和关闭游标，语法也简单：
+
+```mysql
+OPEN 游标名称;
+
+CLOSE 游标名称;
+```
+
+`打开游标`意味着执行查询语句，创建一个该查询语句得到的结果集关联起来的`游标`，`关闭游标`意味着会释放该游标相关的资源，所以一旦我们使用完了`游标`，就要把它关闭掉。当然如果我们不显式的使用`CLOSE`语句关闭游标的话，在该存储过程的`END`语句执行完之后会自动关闭的。
+
+```mysql
+CREATE PROCEDURE cursor_demo()
+BEGIN
+    DECLARE t1_record_cursor CURSOR FOR SELECT m1, n1 FROM t1;
+
+    OPEN t1_record_cursor;
+
+    CLOSE t1_record_cursor;
+END
+```
+
+### 使用游标获取记录
+
+获取记录的语句长这样：
+
+```mysql
+FETCH 游标名 INTO 变量1, 变量2, ... 变量n
+```
+
+这个语句的意思就是把指定游标对应记录的各列的值依次赋值给`INTO`后边的各个变量。
+
+**游标可以理解为一个指针或者迭代器，如果你只访问当前，会只提示当前的。放在循环里面可以把所有的值都遍历出来。**
+
+我们来继续改写一下`cursor_demo`存储过程：
+
+```mysql
+CREATE PROCEDURE cursor_demo()
+BEGIN
+    DECLARE m_value INT;
+    DECLARE n_value CHAR(1);
+
+    DECLARE t1_record_cursor CURSOR FOR SELECT m1, n1 FROM t1;
+
+    OPEN t1_record_cursor;
+
+    FETCH t1_record_cursor INTO m_value, n_value;
+    SELECT m_value, n_value;
+
+    CLOSE t1_record_cursor;
+END $
+```
+
+我们来调用一下这个存储过程：
+
+```mysql
+mysql> CALL cursor_demo();
++---------+---------+
+| m_value | n_value |
++---------+---------+
+|       1 | a       |
++---------+---------+
+1 row in set (0.00 sec)
+
+Query OK, 0 rows affected (0.00 sec)
+
+mysql>
+```
+
+额，奇怪，`t1`表里有4条记录，我们这里只取出了第一条？是的，如果想获取多条记录，那需要把 FETCH 语句放到循环语句中，我们再来修改一下`cursor_demo`存储过程：
+
+```mysql
+CREATE PROCEDURE cursor_demo()
+BEGIN
+    DECLARE m_value INT;
+    DECLARE n_value CHAR(1);
+    DECLARE record_count INT;
+    DECLARE i INT DEFAULT 0;
+
+    DECLARE t1_record_cursor CURSOR FOR SELECT m1, n1 FROM t1;
+
+    SELECT COUNT(*) FROM t1 INTO record_count;
+
+    OPEN t1_record_cursor;
+
+    WHILE i < record_count DO
+        FETCH t1_record_cursor INTO m_value, n_value;
+        SELECT m_value, n_value;
+        SET i = i + 1;
+    END WHILE;
+
+    CLOSE t1_record_cursor;
+END
+```
+
+这次我们又多使用了两个变量，`record_count`表示`t1`表中的记录行数，`i`表示当前游标对应的记录位置。每调用一次 FETCH 语句，游标就移动到下一条记录的位置。看一下调用效果：
+
+```mysql
+mysql> CALL cursor_demo();
++---------+---------+
+| m_value | n_value |
++---------+---------+
+|       1 | a       |
++---------+---------+
+1 row in set (0.00 sec)
+
++---------+---------+
+| m_value | n_value |
++---------+---------+
+|       2 | b       |
++---------+---------+
+1 row in set (0.00 sec)
+
++---------+---------+
+| m_value | n_value |
++---------+---------+
+|       3 | c       |
++---------+---------+
+1 row in set (0.00 sec)
+
++---------+---------+
+| m_value | n_value |
++---------+---------+
+|       4 | d       |
++---------+---------+
+1 row in set (0.00 sec)
+
+Query OK, 0 rows affected (0.00 sec)
+
+mysql>
+```
+
+这回就把`t1`表中全部的记录就都遍历完了。
+
+### 遍历结束时的执行策略
+
+上边介绍的遍历方式需要我们首先获得查询语句结构集中记录的条数，也就是需要先执行下边这条语句：
+
+```mysql
+SELECT COUNT(*) FROM t1 INTO record_count;
+```
+
+我们之所以要获取结果集中记录的条数，是因为我们需要一个结束循环的条件，当调用`FETCH`语句的次数与结果集中记录条数相等时就结束循环。
+
+其实在`FETCH`语句获取不到记录的时候会触发一个事件，从而我们可以得知所有的记录都被获取过了，然后我们就可以去主动的停止循环。`MySQL`中响应这个事件的语句如下：
+
+```mysql
+DECLARE CONTINUE HANDLER FOR NOT FOUND 处理语句;
+```
+
+只要我们在存储过程中写了这个语句，那么在`FETCH`语句获取不到记录的时候，服务器就会执行我们填写的处理语句。
+
+```
+处理语句可以是简单的一条语句，也可以是由BEGIN ... END 包裹的多条语句。
+```
+
+我们接下来再来改写一下`cursor_demo`存储过程：
+
+```mysql
+CREATE PROCEDURE cursor_demo()
+BEGIN
+    DECLARE m_value INT;
+    DECLARE n_value CHAR(1);
+    DECLARE not_done INT DEFAULT 1;
+
+    DECLARE t1_record_cursor CURSOR FOR SELECT m1, n1 FROM t1;
+
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET not_done = 0;
+
+    OPEN t1_record_cursor;
+
+    flag: LOOP
+        FETCH t1_record_cursor INTO m_value, n_value;
+        IF not_done = 0 THEN
+            LEAVE flag;
+        END IF;
+        SELECT m_value, n_value, not_done;
+    END LOOP flag;
+
+    CLOSE t1_record_cursor;
+END
+```
+
+我们声明了一个默认值为`1`的`not_done`变量和一个这样的语句：
+
+```mysql
+DECLARE CONTINUE HANDLER FOR NOT FOUND SET not_done = 0;
+```
+
+`not_done`变量的值为`1`时表明遍历结果集的过程还没有结束，当`FETCH`语句无法获取更多记录时，就会触发一个事件，从而导致`MySQL`服务器主动调用上边的这个语句将`not_done`变量的值改为`0`。另外，我们把原先的`WHILE`语句替换成了`LOOP`语句，直接在`LOOP`语句的循环体中判断`not_done`变量的值，当它的值为`0`时就主动跳出循环。
+
+让我们调用一下这个存储过程看一下效果：
+
+```mysql
+mysql> call cursor_demo;
++---------+---------+----------+
+| m_value | n_value | not_done |
++---------+---------+----------+
+|       1 | a       |        1 |
++---------+---------+----------+
+1 row in set (0.05 sec)
+
++---------+---------+----------+
+| m_value | n_value | not_done |
++---------+---------+----------+
+|       2 | b       |        1 |
++---------+---------+----------+
+1 row in set (0.05 sec)
+
++---------+---------+----------+
+| m_value | n_value | not_done |
++---------+---------+----------+
+|       3 | c       |        1 |
++---------+---------+----------+
+1 row in set (0.06 sec)
+
++---------+---------+----------+
+| m_value | n_value | not_done |
++---------+---------+----------+
+|       4 | d       |        1 |
++---------+---------+----------+
+1 row in set (0.06 sec)
+
+Query OK, 0 rows affected (0.07 sec)
+```
+
+## 触发器和事件
+
+我们前边说过存储程序包括`存储例程`（`存储函数`与`存储过程`）、`触发器`和`事件`，其中`存储例程`是需要我们手动调用的，而`触发器`和`事件`是`MySQL`服务器在特定情况下自动调用的，接下来我们分别看一下`触发器`和`事件`。
+
+### 触发器
+
+我们在对表中的记录做增、删、改操作前和后都可能需要让`MySQL`服务器自动执行一些额外的语句，这个就是所谓的`触发器`的应用场景。
+
+#### 创建触发器
+
+定义`触发器`的语句：
+
+```mysql
+CREATE TRIGGER 触发器名
+{BEFORE|AFTER}
+{INSERT|DELETE|UPDATE}
+ON 表名
+FOR EACH ROW
+BEGIN
+    触发器内容
+END
+```
+
+> 由大括号`{}`包裹并且内部用竖线`|`分隔的语句表示必须在给定的选项中选取一个值，比如`{BEFORE|AFTER}`表示必须在`BEFORE`、`AFTER`这两个之间选取一个。
+
+其中`{BEFORE|AFTER}`表示触发器内容执行的时机，它们的含义如下：
+
+|   名称   |                      描述                      |
+| :------: | :--------------------------------------------: |
+| `BEFORE` | 表示在具体的语句执行之前就开始执行触发器的内容 |
+| `AFTER`  | 表示在具体的语句执行之后才开始执行触发器的内容 |
+
+`{INSERT|DELETE|UPDATE}`表示具体的语句，`MySQL`中目前只支持对`INSERT`、`DELETE`、`UPDATE`这三种类型的语句设置触发器。
+
+`FOR EACH ROW BEGIN ... END`表示对具体语句影响的每一条记录都执行我们自定义的触发器内容：
+
+- 对于`INSERT`语句来说，`FOR EACH ROW`影响的记录就是我们准备插入的那些新记录。
+- 对于`DELETE`语句和`UPDATE`语句来说，`FOR EACH ROW`影响的记录就是符合`WHERE`条件的那些记录（如果语句中没有`WHERE`条件，那就是代表全部的记录）。
+
+> 如果触发器内容只包含一条语句，那也可以省略BEGN、END这两个词儿。
+
+因为`MySQL`服务器会对某条语句影响的所有记录依次调用我们自定义的触发器内容，所以针对每一条受影响的记录，我们需要一种访问该记录中的内容的方式，`MySQL`提供了`NEW`和`OLD`两个单词来分别代表新记录和旧记录，它们在不同语句中的含义不同：
+
+- 对于`INSERT`语句设置的触发器来说，`NEW`代表准备插入的记录，`OLD`无效。
+- 对于`DELETE`语句设置的触发器来说，`OLD`代表删除前的记录，`NEW`无效。
+- 对于`UPDATE`语句设置的触发器来说，`NEW`代表修改后的记录，`OLD`代表修改前的记录。
+
+举个例子：
+
+```mysql
+mysql> delimiter $
+mysql> CREATE TRIGGER bi_t1
+    -> BEFORE INSERT ON t1
+    -> FOR EACH ROW
+    -> BEGIN
+    ->     IF NEW.m1 < 1 THEN
+    ->         SET NEW.m1 = 1;
+    ->     ELSEIF NEW.m1 > 10 THEN
+    ->         SET NEW.m1 = 10;
+    ->     END IF;
+    -> END $
+Query OK, 0 rows affected (0.02 sec)
+
+mysql> delimiter ;
+mysql>
+```
+
+我们对`t1`表定义了一个名叫`bi_t1`的`触发器`，它的意思就是在对`t1`表插入新记录之前，对准备插入的每一条记录都会执行`BEGIN ... END`之间的语句，`NEW.列名`表示当前待插入记录指定列的值。现在`t1`表中一共有4条记录：
+
+```mysql
+mysql> SELECT * FROM t1;
++------+------+
+| m1   | n1   |
++------+------+
+|    1 | a    |
+|    2 | b    |
+|    3 | c    |
+|    4 | d    |
++------+------+
+4 rows in set (0.00 sec)
+
+mysql>
+```
+
+我们现在执行一下插入语句并再次查看一下`t1`表的内容：
+
+```mysql
+mysql> INSERT INTO t1(m1, n1) VALUES(5, 'e'), (100, 'z');
+Query OK, 2 rows affected (0.00 sec)
+Records: 2  Duplicates: 0  Warnings: 0
+
+mysql> SELECT * FROM t1;
++------+------+
+| m1   | n1   |
++------+------+
+|    1 | a    |
+|    2 | b    |
+|    3 | c    |
+|    4 | d    |
+|    5 | e    |
+|   10 | z    |
++------+------+
+6 rows in set (0.00 sec)
+
+mysql>
+```
+
+这个`INSERT`语句影响的记录有两条，分别是`(5, 'e')`和`(100, 'z')`，这两条记录将分别执行我们自定义的触发器内容。很显然`(5, 'e')`被成功的插入到了`t1`表中，而`(100, 'z')`插入到表中后却变成了`(10, 'z')`，这个就说明我们的`bi_t1`触发器生效了！
+
+> 小贴士： 我们上边定义的触发器名`bi_t1`的`bi`是`before insert`的首字母缩写，`t1`是表名。虽然对于触发器的命名并没有什么特殊的要求，但是习惯上还是建议大家把它定义我上边例子中的形式，也就是`bi_表名`、`bd_表名`、`bu_表名`、`ai_表名`、`ad_表名`、`au_表名`的形式。
+
+上边只是举了一个对`INSERT`语句设置`BEFORE`触发器的例子，对`DELETE`和`UPDATE`操作设置`BEFORE`或者`AFTER`触发器的过程是类似的，就不赘述了。
+
+#### 查看和删除触发器
+
+查看当前数据库中定义的所有触发器的语句：
+
+```mysql
+SHOW TRIGGERS;
+```
+
+查看某个具体的触发器的定义：
+
+```mysql
+SHOW CREATE TRIGGER 触发器名;
+```
+
+删除触发器：
+
+```mysql
+DROP TRIGGER 触发器名;
+```
+
+#### 触发器使用注意事项
+
+- 触发器内容中不能有输出结果集的语句。
+- 触发器内容中NEW代表记录的列的值可以被更改，OLD代表记录的列的值无法更改。
+- 在BEFORE触发器中，我们可以使用`SET NEW.列名 = 某个值`的形式来更改待插入记录或者待更新记录的某个列的值，但是这种操作不能在AFTER触发器中使用，因为在执行AFTER触发器的内容时记录已经被插入完成或者更新完成了。
+- 如果我们的`BEFORE`触发器内容执行过程中遇到了错误，那这个触发器对应的具体语句将无法执行；如果具体的操作语句执行过程中遇到了错误，那与它对应的`AFTER`触发器的内容将无法执行。
+
+### 事件
+
+有时候我们想让`MySQL`服务器在某个时间点或者每隔一段时间自动地执行一些语句，这时候就需要去创建一个`事件`。
+
+#### 创建事件
+
+创建事件的语法如下：
+
+```mysql
+CREATE EVENT 事件名
+ON SCHEDULE
+{
+    AT 某个确定的时间点| 
+    EVERY 期望的时间间隔 [STARTS datetime][END datetime]
+}
+DO
+BEGIN
+    具体的语句
+END
+```
+
+`事件`支持两种类型的自动执行方式：
+
+1. 在某个确定的时间点执行。
+
+   比方说：
+
+   ```mysql
+   CREATE EVENT insert_t1_event
+   ON SCHEDULE
+   AT '2019-09-04 15:48:54'
+   DO
+   BEGIN
+       INSERT INTO t1(m1, n1) VALUES(6, 'f');
+   END
+   ```
+
+   我们在这个`事件`中指定了执行时间是`'2019-09-04 15:48:54'`，除了直接填某个时间常量，我们也可以填写一些表达式：
+
+   ```mysql
+   CREATE EVENT insert_t1
+   ON SCHEDULE
+   AT DATE_ADD(NOW(), INTERVAL 2 DAY)
+   DO
+   BEGIN
+       INSERT INTO t1(m1, n1) VALUES(6, 'f');
+   END
+   ```
+
+   其中的`DATE_ADD(NOW(), INTERVAL 2 DAY)`表示该事件将在当前时间的两天后执行。
+
+2. 每隔一段时间执行一次。
+
+   比方说：
+
+   ```mysql
+   CREATE EVENT insert_t1
+   ON SCHEDULE
+   EVERY 1 HOUR
+   DO
+   BEGIN
+       INSERT INTO t1(m1, n1) VALUES(6, 'f');
+   END
+   ```
+
+   其中的`EVERY 1 HOUR`表示该事件将每隔1个小时执行一次。默认情况下，采用这种每隔一段时间执行一次的方式将从创建事件的事件开始，无限制的执行下去。我们也可以指定该事件开始执行时间和截止时间：
+
+   ```
+   CREATE EVENT insert_t1
+   ON SCHEDULE
+   EVERY 1 HOUR STARTS '2019-09-04 15:48:54' ENDS '2019-09-16 15:48:54'
+   DO
+   BEGIN
+       INSERT INTO t1(m1, n1) VALUES(6, 'f');
+   END
+   ```
+
+   如上所示，该事件将从'2019-09-04 15:48:54'开始直到'2019-09-16 15:48:54'为止，中间每隔1个小时执行一次。
+
+   > 表示事件间隔的单位除了HOUR，还可以用YEAR、QUARTER、MONTH、DAY、HOUR、 MINUTE、WEEK、SECOND、YEAR_MONTH、DAY_HOUR、DAY_MINUTE、DAY_SECOND、HOUR_MINUTE、HOUR_SECOND、MINUTE_SECOND这些单位，根据具体需求选用我们需要的时间间隔单位。
+
+在创建好`事件`之后我们就不用管了，到了指定时间，`MySQL`服务器会帮我们自动执行的。
+
+#### 查看和删除事件
+
+查看当前数据库中定义的所有事件的语句：
+
+```mysql
+SHOW EVENTS;
+```
+
+查看某个具体的事件的定义：
+
+```mysql
+SHOW CREATE EVENT 事件名;
+```
+
+删除事件：
+
+```mysql
+DROP EVENT 事件名;
+```
+
+#### 事件使用注意事项
+
+默认情况下，`MySQL`服务器并不会帮助我们执行事件，除非我们使用下边的语句手动开启该功能：
+
+```mysql
+mysql> SET GLOBAL event_scheduler = ON;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql>
+```
+
+> event_scheduler其实是一个系统变量，它的值也可以在MySQL服务器启动的时候通过启动参数或者通过配置文件来设置event_scheduler的值。
+
+---
+
+END. By riba2534.

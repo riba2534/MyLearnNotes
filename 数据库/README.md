@@ -8,7 +8,7 @@
 
 ### MySQL
 
-- [MySQL语句学习笔记](MySQL/MySQL语句学习笔记.md)
+- [MySQL基础学习笔记](MySQL/MySQL基础学习笔记.md)
 - [《MySQL实战45讲》笔记](MySQL/《MySQL实战45讲》笔记.md)
 - [mysql踩坑记录](MySQL/mysql踩坑记录.md)
 
