@@ -1368,15 +1368,9 @@ GEOHASH key member [member ...]
 - 数据同步阶段
 - 命令传播阶段
 
-建立连接阶段工作流程：
+三个核心
 
-1. 设置master的地址和端口，保存master信息
-2. 建立socket连接
-3. 发送ping命令
-4. 身份验证
-5. 发送slave端口信息
-
-至此，主从连接成功！
+心跳机制
 
 状态：
 
@@ -1387,7 +1381,17 @@ master:
 保存slave的端口。
 ```
 
-### 主从连接（slave 连接 master）
+### 一：建立连接阶段（slave 连接 master）
+
+建立连接阶段工作流程：
+
+1. 设置master的地址和端口，保存master信息
+2. 建立socket连接
+3. 发送ping命令
+4. 身份验证
+5. 发送slave端口信息
+
+至此，主从连接成功！
 
 ```
 # 方式一：客户端发送命令
@@ -1406,3 +1410,184 @@ slaveofg <masterip> <masterport>
   - masterport
 - master系统信息
   - slave_listening_port（多个）
+
+#### 主从断开连接
+
+```
+客户端发送指令
+slaveof no one
+```
+
+#### 授权访问
+
+```
+# master 配置文件设置密码
+requirepass <password>
+
+# master客户端发送命令设置密码
+config set requirepass <password>
+config get requirepass
+
+# slave客户端发送命令设置密码
+auth <password>
+
+# slave配置文件设置密码
+masterauth <password>
+
+# 启动客户端设置密码
+redis-cli -a <password>
+```
+
+### 二：数据同步阶段
+
+- 在slave初次连接master后，复制master中的所有数据到slave
+- 将slave的数据库状态更新成master当前的数据库状态
+
+<img src="redis学习笔记.assets/image-20200505180751542.png" alt="image-20200505180751542" style="zoom: 80%;" />
+
+master注意:
+
+1. 如果master数据量巨大，数据同步应避免流量高峰期，避免造成master阻塞，影响正常业务执行
+
+2. 复制缓冲区大小设置不合理，会导致数据溢出，如果进行全量数据周期太长，进行部分复制时发现数据存在丢失情况，必须进行第二次全量复制，导致slave陷入死循环状态。
+
+   解决方案，master执行：
+
+   ```
+   repl-backlog-size 1mb
+   ```
+
+slave注意：
+
+1. 为了避免slave进行全量复制，部分复制时服务器响应阻塞或数据不同步，应该关闭此期间的对应服务：
+
+   ```
+   slave-serve-stable-data yes|no
+   ```
+
+2. 数据同步阶段，master发送给slave信息可以理解master是slave的一个客户端，主动向slave发送命令.
+
+3. 有多个slave同时对master请求同步时,master发送的edb文件增多，会对宽带造成巨大冲击，如果master带宽不足，因此数据同步要根据业务需求，适量错峰
+
+4. slave过多时，建议调整为拓扑结构，由一主多从结构变为树状结构，中间节点既是master也是slave。注意使用树状结构时，由于层级深度，导致深度越高的slave与最顶层master间数据同步延迟较大，数据一致性会变差。
+
+### 三：命令传播阶段
+
+命令传播阶段的部分复制：
+
+- 命令传播阶段出现了断网现象
+  - 网络闪断闪连 忽略
+  - 短时间网络中断 部分复制
+  - 长时间网络中断 全量复制
+- 部分复制的三个核心要素
+  - 服务器运行id(run id)
+  - 主服务器的复制积压缓冲区
+  - 主从服务器的复制偏移量
+
+#### 服务器运行id（`runid`）
+
+- 概念：服务器运行id时每一台服务器每次运行的身份识别码，一台服务器可以多次运行生成多个运行id
+- 组成：运行id由40位字符组成，是一个随机的16进制字符
+- 作用：运行id被用于在服务器间进行传输，识别身份
+  - 如果想两次操作均对同一台服务器进行，必须每次操作携带对应的运行id，用于对方识别
+- 实现方式：运行id在每台服务器启动时自动生成的,master在首次连接slave时，会将自己的运行id发送给slave，slave保存此id，通过`info server`命令，可以查看节点的runid
+
+#### 复制缓冲区
+
+- 复制缓冲区，又名复制积压缓冲区，是一个先进先出（`FIFO`）的队列，用于存储服务器执行过的命令，每次传播命令，master都会将传播的命令记录下来，并存储在复制缓冲区。
+  - 复制缓冲区默认数据存储空间大小是 1M，由于存储空间大小是固定的，当入队元素的数量大于队列长度时，最先入队的元素会被弹出，而新元素会被放入队列
+- 由来：每台服务器启动时，如果开启有 AOF 或者被链接成master节点，即创建复制缓冲区。
+- 作用：用于保存master收到的所有指令（仅影响数据变更的指令，例如set select）
+- 数据来源：当master接收到主客户端的指令时，除了将指令执行，会将该指令存储到缓冲区中
+
+![image-20200505210146767](redis学习笔记.assets/image-20200505210146767.png)
+
+工作原理：
+
+- 组成
+  - 偏移量
+  - 字节值
+- 工作原理
+  - 通过offset区分不同的slave当前数据传播的差异
+  - master记录已发送的信息对应的offset
+  - slave记录已接收的信息对应的offset
+
+![image-20200505212102148](redis学习笔记.assets/image-20200505212102148.png)
+
+### 心跳机制
+
+进入命令传播阶段，master与slave间需要进行信息交换，使用心跳机制进行维护，实现双方连接保持在线
+
+- master心跳
+  - 指令：PING
+  - 周期：由 repl-ping-slave-period 决定，默认 10 秒
+  - 作用：判断slave是否在线
+  - 查询：INFO replication 获取slave最后一次连接时间间隔，lag项维持在0或1视为正常
+- slave心跳任务
+  - 指令：REPLCONF ACK {offset}
+  - 周期：1 秒
+  - 作用1：汇报slave自己的复制偏移量，获取最新的数据变更指令
+  - 作用2：判断master是否在线
+
+心跳阶段注意事项：
+
+- 当slave多数掉线，或者延迟过高时，master为了数据稳定性，将拒绝所有信息同步操作
+
+  ```
+  min-slave-to-write 2
+  min-slave-max-lag 8
+  ```
+
+  **slave数量少于2个，或者所有slave的延迟都大于等于10秒，强制关闭master写功能，停止数据同步**
+
+- slave数量由slave发送  `REPLCONF ACK` 命令进行确认
+
+- slave延迟由slave发送 `REPLCONF ACK` 命令进行确认
+
+### 主从复制常见问题
+
+**频繁的全量复制1**：
+
+伴随着系统运行，master的量会越来越大，一旦master重启，runid将发生变化，会导致全部slave的全量复制操作。
+
+内部优化调整方案：
+
+1. master内部创建master_replid变量，使用runid相同的策略生成，长度41位，并发给所以slave
+2. 在master关闭时执行命令 `shutdown save` ，进行 `RDB` 持久化，将runid与offset保存到RDB文件中
+   - `repl-id` `repl-offset`
+   - 通过`redis-check-rdb`命令可以查看该信息
+3. master重启后加载RDB文件，恢复数据
+
+**频繁的全量复制2**：
+
+- 问题现象：
+  - 网络环境不佳，slave不提供服务
+- 问题原因
+  - 复制缓冲区过小，断网后slave的offset越界，触发全量复制
+- 解决方案
+  - 修改复制缓冲区大小 `repl-backlog-size`
+
+**频繁的网络中断**
+
+master的CPU占比过高或slave频繁断开连接，尝试设置合理的超时时间 `repl-timeout`
+
+slave与master连接断开，原因可能是master发送ping命令指令频度较低，master设定超时时间较短，ping指令在网络中存在丢包，解决方案是提高ping指令的发送频度 `repl-ping-slave-period` 超时时间 repl-time 的时间至少是 ping 指令的 5 到 10 倍，否则 slave 很容易判定超时。
+
+**数据不一致**
+
+问题是多个slave获取数据不同步，原因可能是延迟导致。解决方案是：
+
+- 优化主从网络环境，通常是同一机房部署
+
+- 监控朱从节点延迟（offset判定），如果slave延迟过大，暂时屏蔽该slave的数据访问
+
+  ```
+  slave-serve-stale-data yes|no
+  ```
+
+  开启后仅响应 info、slaveof 等少数命令，慎用。
+
+## 哨兵
+
+
+
