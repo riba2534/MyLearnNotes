@@ -9,6 +9,7 @@
 ### MySQL
 
 - [MySQL基础学习笔记](MySQL/MySQL基础学习笔记.md)
+- [MySQL是怎样运行的](MySQL/MySQL是怎样运行的.md)
 - [《MySQL实战45讲》笔记](MySQL/《MySQL实战45讲》笔记.md)
 - [mysql踩坑记录](MySQL/mysql踩坑记录.md)
 
