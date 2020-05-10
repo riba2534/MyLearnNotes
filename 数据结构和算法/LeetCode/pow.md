@@ -31,9 +31,11 @@
 
 ## 思路
 
-递归版的快速幂
+裸的快速幂，递归与非递归都可以实现。
 
 ## 代码
+
+递归版：
 
 ```cpp
 class Solution
@@ -54,6 +56,34 @@ class Solution
         if (n > 0)
             return po(x, n);
         return 1.0 / po(x, n);
+    }
+};
+```
+
+非递归版：
+
+```cpp
+class Solution
+{
+public:
+    double hpow(double x, long long n)
+    {
+        double ans = 1.0;
+        while (n)
+        {
+            if (n & 1)
+                ans *= x;
+            x *= x;
+            n >>= 1;
+        }
+        return ans;
+    }
+    double myPow(double x, int n)
+    {
+        long long ln = n;
+        if (ln < 0)
+            return 1.0 / hpow(x, -ln);
+        return hpow(x, ln);
     }
 };
 ```
