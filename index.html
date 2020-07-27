@@ -8,20 +8,54 @@
   <meta name="description" content="Description">
   <meta name="viewport"
     content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
-  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify/lib/themes/vue.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsify-themeable@0/dist/css/theme-simple.css">
 </head>
 
 <body>
-  <div id="app"></div>
+  <div id="app">稍等一下，马上就好</div>
   <script>
     window.$docsify = {
-      name: '',
-      repo: '',
-      // 启用相对路径
-      relativePath: true
+      name: '目录',
+      repo: 'https://github.com/riba2534/MyLearnNotes',
+      nameLink: '/',
+      loadSidebar: true,  //侧边栏,_sidebar.md
+      relativePath: true, // 启用相对路径
+      search: {
+        paths: 'auto',
+        placeholder: 'Search',
+        noData: 'No Results!',
+      },
+      markdown: { // markdown 的流程图支持
+        renderer: {
+          code: function (code, lang) {
+            if (lang === "mermaid") {
+              return (
+                '<div class="mermaid">' + mermaid.render('mermaid-svg-' + id++, code) + "</div>"
+              );
+            }
+            return this.origin.code.apply(this, arguments);
+          }
+        }
+      }
     }
   </script>
   <script src="//cdn.jsdelivr.net/npm/docsify/lib/docsify.min.js"></script>
+  <!-- 全文搜索 -->
+  <script src="//unpkg.com/docsify/lib/plugins/search.js"></script>
+  <!-- emoji -->
+  <script src="//unpkg.com/docsify/lib/plugins/emoji.js"></script>
+  <script src="//unpkg.com/prismjs/components/prism-c.js"></script>
+  <script src="//unpkg.com/prismjs/components/prism-clike.js"></script>
+  <script src="//unpkg.com/prismjs/components/prism-cpp.js"></script>
+  <script src="//unpkg.com/prismjs/components/prism-php.min.js"></script>
+  <script sre="//unpkg.com/prismjs/components/prism-python.min.js"></script>
+
+  <!-- 添加代码右上角复制到剪切板按钮 -->
+  <script src="//cdn.jsdelivr.net/npm/docsify-copy-code@2"></script>
+  <!-- 支持Markdown中的TaLeX数学公式 -->
+  <script src="//cdn.jsdelivr.net/npm/docsify-katex@latest/dist/docsify-katex.js"></script>
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
+  </script>
 </body>
 
 </html>
