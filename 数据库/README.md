@@ -12,7 +12,7 @@
 - [MySQL是怎样运行的](MySQL/MySQL是怎样运行的.md)
 - [《MySQL实战45讲》笔记](MySQL/《MySQL实战45讲》笔记.md)
 - [mysql踩坑记录](MySQL/mysql踩坑记录.md)
-- [《高性能MySQL》学习笔记](MySQL/《高性能MySQL》学习笔记)
+- [《高性能MySQL》学习笔记](MySQL/《高性能MySQL》学习笔记/)
 
 
 
