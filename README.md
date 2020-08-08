@@ -5,7 +5,7 @@
 > 我的一些学习笔记，分为以下几个大类。
 > 具体内容，可以用以下几个分类中找到.
 
-网页版在线阅读：https://notes.riba2534.cn/
+网页版在线阅读：[MyCSNotes](https://notes.riba2534.cn/)
 
 
 - #### [CPP](CPP/)
