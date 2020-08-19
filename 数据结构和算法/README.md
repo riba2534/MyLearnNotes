@@ -156,6 +156,7 @@
 |      460      |                [LFU缓存](LeetCode/LFU缓存.md)                | 困难 |
 |      466      |           [统计重复个数](LeetCode/统计重复个数.md)           | 困难 |
 |      518      |            [零钱兑换 II](LeetCode/零钱兑换II.md)             | 中等 |
+|      529      |               [扫雷游戏](LeetCode/扫雷游戏.md)               | 中等 |
 |      542      |                [01 矩阵](LeetCode/01矩阵.md)                 | 中等 |
 |      546      |               [移除盒子](LeetCode/移除盒子.md)               | 困难 |
 |      560      |          [和为K的子数组](LeetCode/和为K的子数组.md)          | 中等 |
