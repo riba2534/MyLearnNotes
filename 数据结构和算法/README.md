@@ -154,6 +154,7 @@
 |      415      |             [字符串相加](LeetCode/字符串相加.md)             | 简单 |
 |      440      |    [字典序的第K小数字.md](LeetCode/字典序的第K小数字.md)     | 困难 |
 |      445      |            [两数相加 II](LeetCode/两数相加II.md)             | 中等 |
+|      459      |         [重复的子字符串](LeetCode/重复的子字符串.md)         | 简单 |
 |      460      |                [LFU缓存](LeetCode/LFU缓存.md)                | 困难 |
 |      466      |           [统计重复个数](LeetCode/统计重复个数.md)           | 困难 |
 |      518      |            [零钱兑换 II](LeetCode/零钱兑换II.md)             | 中等 |
