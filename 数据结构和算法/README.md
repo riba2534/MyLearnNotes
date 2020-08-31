@@ -160,6 +160,7 @@
 |      459      |         [重复的子字符串](LeetCode/重复的子字符串.md)         | 简单 |         kmp         |
 |      460      |                [LFU缓存](LeetCode/LFU缓存.md)                | 困难 |      模拟、lfu      |
 |      466      |           [统计重复个数](LeetCode/统计重复个数.md)           | 困难 |    循环节、思路     |
+|      486      |               [预测赢家](LeetCode/预测赢家.md)               | 中等 |   博弈、递归、dp    |
 |      491      |             [递增子序列](LeetCode/递增子序列.md)             | 中等 |      枚举子集       |
 |      518      |            [零钱兑换 II](LeetCode/零钱兑换II.md)             | 中等 |      dp、背包       |
 |      529      |               [扫雷游戏](LeetCode/扫雷游戏.md)               | 中等 |         dfs         |
