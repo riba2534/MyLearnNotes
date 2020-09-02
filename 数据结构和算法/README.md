@@ -100,6 +100,7 @@
 |      45       |            [跳跃游戏 II](LeetCode/跳跃游戏II.md)             | 困难 |     贪心、思路      |
 |      46       |                 [全排列](LeetCode/全排列.md)                 | 中等 |         dfs         |
 |      50       |                 [Pow(x,n)](LeetCode/pow.md)                  | 中等 |       快速幂        |
+|      51       |                 [N 皇后](LeetCode/N皇后.md)                  | 困难 |         dfs         |
 |      53       |             [最大子序和](LeetCode/最大子序和.md)             | 简单 |   dp、最大字段和    |
 |      55       |               [跳跃游戏](LeetCode/跳跃游戏.md)               | 中等 |     贪心、思路      |
 |      56       |               [合并区间](LeetCode/合并区间.md)               | 中等 |        贪心         |
